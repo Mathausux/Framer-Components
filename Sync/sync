@@ -2,6 +2,12 @@
 
 Arquivo de sincronizacao entre agentes de IA para colaborar neste repositorio.
 
+## Regra zero
+
+- Ler `Sync/sync` deve ser a primeira coisa feita antes de executar qualquer acao neste repositorio.
+- Esta regra vale para Codex, Claude e qualquer outro agente.
+- Nenhum comando, edicao, instalacao, criacao de arquivo, organizacao de pasta ou alteracao de componente deve acontecer antes da leitura deste arquivo.
+
 ## Objetivo
 
 Manter Codex, Claude e outros assistentes alinhados durante a criacao, revisao e manutencao de codigo, evitando retrabalho, conflitos e perda de contexto.
@@ -19,10 +25,11 @@ Manter Codex, Claude e outros assistentes alinhados durante a criacao, revisao e
 - Projeto: Framer Components
 - Ultima sincronizacao: 2026-08-11
 - Responsavel pelo registro inicial: Codex
-- Status: estrutura de empresas criada dentro de `Framer Codes Component`; pasta `Skills` pronta para receber skills somente mediante `skillinstall`
+- Status: regra zero adicionada; estrutura de empresas criada dentro de `Framer Codes Component`; pasta `Skills` pronta para receber skills somente mediante `skillinstall`
 
 ## Regras globais
 
+- Ler `Sync/sync` sempre vem antes de qualquer outra acao no repositorio.
 - Skills so podem ser instaladas dentro de `Skills/` quando o usuario declarar explicitamente o comando `skillinstall`.
 - Sem `skillinstall`, agentes podem sugerir, planejar, revisar ou preparar conteudo de skills, mas nao instalar skills.
 - Antes de qualquer mudanca relevante, atualizar ou consultar este arquivo.
@@ -64,6 +71,7 @@ Sempre que Codex, Claude ou outro agente criar um componente Framer neste reposi
 | Codex | Criar pasta para instalacao de skills | `Skills/.gitkeep`, `sync` | concluido | 2026-08-11 |
 | Codex | Mover sync para pasta dedicada e adicionar regras Framer | `Sync/sync`, `sync` | concluido | 2026-08-11 |
 | Codex | Criar estrutura de empresas para componentes Framer | `Framer Codes Component/AYVU/.gitkeep`, `Framer Codes Component/COLLATERAL PARTNERS/.gitkeep`, `Framer Codes Component/MEMP/.gitkeep`, `Framer Codes Component/FRAMER SKILLS/.gitkeep`, `Sync/sync` | concluido | 2026-08-11 |
+| Codex | Adicionar regra zero de leitura obrigatoria do sync | `Sync/sync` | concluido | 2026-08-11 |
 
 ## Decisoes
 
@@ -74,6 +82,7 @@ Sempre que Codex, Claude ou outro agente criar um componente Framer neste reposi
 - A pasta `Sync` sera usada para guardar arquivos de coordenacao entre agentes.
 - Regras para componentes Framer devem ficar neste arquivo para que Codex e Claude consultem antes de criar componentes.
 - Componentes Framer devem ser separados por empresa dentro de `Framer Codes Component/`.
+- A leitura de `Sync/sync` e a primeira etapa obrigatoria antes de qualquer acao no repositorio.
 
 ## Bloqueios
 
@@ -81,7 +90,8 @@ Nenhum no momento.
 
 ## Proximos passos
 
-- Claude pode ler `Sync/sync` antes de iniciar alteracoes.
+- Claude deve ler `Sync/sync` antes de qualquer comando ou alteracao.
+- Codex deve ler `Sync/sync` antes de qualquer comando ou alteracao.
 - Codex e Claude devem atualizar a tabela de tarefas em andamento ao assumir ou concluir trabalho.
 - Quando uma tarefa gerar mudancas grandes, registrar tambem um resumo de arquivos alterados.
 - Instalar ou adicionar novas skills dentro de `Skills/` somente quando o usuario declarar `skillinstall`.
