@@ -1,0 +1,83 @@
+# sync
+
+Arquivo de sincronizacao entre agentes de IA para colaborar neste repositorio.
+
+## Objetivo
+
+Manter Codex, Claude e outros assistentes alinhados durante a criacao, revisao e manutencao de codigo, evitando retrabalho, conflitos e perda de contexto.
+
+## Como usar
+
+1. Antes de editar, leia este arquivo e o historico recente do repositorio.
+2. Registre abaixo o que voce pretende fazer.
+3. Ao terminar, atualize o status com arquivos alterados, decisoes tomadas e proximos passos.
+4. Se encontrar conflito ou duvida arquitetural, pare e registre a pergunta em `Bloqueios`.
+5. Para componentes Framer, siga sempre a secao `Regras para componentes Framer` antes de criar ou alterar codigo.
+
+## Estado atual
+
+- Projeto: Framer Components
+- Ultima sincronizacao: 2026-08-11
+- Responsavel pelo registro inicial: Codex
+- Status: arquivo de sincronizacao movido para `Sync/sync`; pasta `Skills` pronta para receber skills somente mediante `skillinstall`
+
+## Regras globais
+
+- Skills so podem ser instaladas dentro de `Skills/` quando o usuario declarar explicitamente o comando `skillinstall`.
+- Sem `skillinstall`, agentes podem sugerir, planejar, revisar ou preparar conteudo de skills, mas nao instalar skills.
+- Antes de qualquer mudanca relevante, atualizar ou consultar este arquivo.
+- Preferir commits pequenos e mensagens objetivas.
+- Nao sobrescrever trabalho de outro agente sem registrar o motivo em `Decisoes` ou `Bloqueios`.
+
+## Regras para componentes Framer
+
+Sempre que Codex, Claude ou outro agente criar um componente Framer neste repositorio, o componente deve seguir estas regras:
+
+1. Criar componentes em React/TypeScript quando aplicavel, mantendo compatibilidade com Framer.
+2. Definir `propertyControls` claros para todas as configuracoes editaveis no Framer.
+3. Expor textos, cores, imagens, links, variantes e valores numericos importantes como propriedades configuraveis.
+4. Usar nomes de props descritivos e estaveis.
+5. Evitar dependencias externas desnecessarias; quando forem necessarias, registrar a decisao em `Decisoes`.
+6. Manter layout responsivo e previsivel dentro do canvas do Framer.
+7. Evitar estilos globais que possam afetar outros componentes.
+8. Preferir animacoes performaticas com transform/opacity.
+9. Garantir que textos nao estourem os limites visuais do componente.
+10. Documentar no proprio arquivo apenas comentarios curtos quando houver logica nao obvia.
+11. Ao concluir, registrar na tabela `Tarefas em andamento` quais componentes foram criados ou alterados.
+
+## Tarefas em andamento
+
+| Agente | Tarefa | Arquivos | Status | Atualizado em |
+| --- | --- | --- | --- | --- |
+| Codex | Criar arquivo de sincronizacao | `sync` | concluido | 2026-08-11 |
+| Codex | Criar pasta para instalacao de skills | `Skills/.gitkeep`, `sync` | concluido | 2026-08-11 |
+| Codex | Mover sync para pasta dedicada e adicionar regras Framer | `Sync/sync`, `sync` | concluido | 2026-08-11 |
+
+## Decisoes
+
+- Este arquivo sera a fonte simples de coordenacao entre agentes.
+- Comentarios devem ser curtos, objetivos e atualizados a cada mudanca relevante.
+- Preferir registrar intencao antes de grandes edicoes.
+- A pasta `Skills` sera usada como local compartilhado para armazenar skills instaladas ou criadas para o repositorio.
+- A pasta `Sync` sera usada para guardar arquivos de coordenacao entre agentes.
+- Regras para componentes Framer devem ficar neste arquivo para que Codex e Claude consultem antes de criar componentes.
+
+## Bloqueios
+
+Nenhum no momento.
+
+## Proximos passos
+
+- Claude pode ler `Sync/sync` antes de iniciar alteracoes.
+- Codex e Claude devem atualizar a tabela de tarefas em andamento ao assumir ou concluir trabalho.
+- Quando uma tarefa gerar mudancas grandes, registrar tambem um resumo de arquivos alterados.
+- Instalar ou adicionar novas skills dentro de `Skills/` somente quando o usuario declarar `skillinstall`.
+- Ajustar as regras de componentes Framer conforme o projeto evoluir.
+
+## Modelo de entrada
+
+Use este formato ao adicionar uma nova atualizacao:
+
+```md
+| NomeDoAgente | Descricao curta da tarefa | `arquivo1`, `arquivo2` | em andamento/concluido/bloqueado | AAAA-MM-DD |
+```
