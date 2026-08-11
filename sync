@@ -1,0 +1,51 @@
+# sync
+
+Arquivo de sincronizacao entre agentes de IA para colaborar neste repositorio.
+
+## Objetivo
+
+Manter Codex, Claude e outros assistentes alinhados durante a criacao, revisao e manutencao de codigo, evitando retrabalho, conflitos e perda de contexto.
+
+## Como usar
+
+1. Antes de editar, leia este arquivo e o historico recente do repositorio.
+2. Registre abaixo o que voce pretende fazer.
+3. Ao terminar, atualize o status com arquivos alterados, decisoes tomadas e proximos passos.
+4. Se encontrar conflito ou duvida arquitetural, pare e registre a pergunta em `Bloqueios`.
+
+## Estado atual
+
+- Projeto: Framer Components
+- Ultima sincronizacao: 2026-08-11
+- Responsavel pelo registro inicial: Codex
+- Status: aguardando proxima tarefa
+
+## Tarefas em andamento
+
+| Agente | Tarefa | Arquivos | Status | Atualizado em |
+| --- | --- | --- | --- | --- |
+| Codex | Criar arquivo de sincronizacao | `sync` | concluido | 2026-08-11 |
+
+## Decisoes
+
+- Este arquivo sera a fonte simples de coordenacao entre agentes.
+- Comentarios devem ser curtos, objetivos e atualizados a cada mudanca relevante.
+- Preferir registrar intencao antes de grandes edicoes.
+
+## Bloqueios
+
+Nenhum no momento.
+
+## Proximos passos
+
+- Claude pode ler este arquivo antes de iniciar alteracoes.
+- Codex e Claude devem atualizar a tabela de tarefas em andamento ao assumir ou concluir trabalho.
+- Quando uma tarefa gerar mudancas grandes, registrar tambem um resumo de arquivos alterados.
+
+## Modelo de entrada
+
+Use este formato ao adicionar uma nova atualizacao:
+
+```md
+| NomeDoAgente | Descricao curta da tarefa | `arquivo1`, `arquivo2` | em andamento/concluido/bloqueado | AAAA-MM-DD |
+```
