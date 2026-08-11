@@ -18,19 +18,21 @@ Manter Codex, Claude e outros assistentes alinhados durante a criacao, revisao e
 - Projeto: Framer Components
 - Ultima sincronizacao: 2026-08-11
 - Responsavel pelo registro inicial: Codex
-- Status: aguardando proxima tarefa
+- Status: pasta `Skills` criada para receber instalacoes de skills
 
 ## Tarefas em andamento
 
 | Agente | Tarefa | Arquivos | Status | Atualizado em |
 | --- | --- | --- | --- | --- |
 | Codex | Criar arquivo de sincronizacao | `sync` | concluido | 2026-08-11 |
+| Codex | Criar pasta para instalacao de skills | `Skills/.gitkeep`, `sync` | concluido | 2026-08-11 |
 
 ## Decisoes
 
 - Este arquivo sera a fonte simples de coordenacao entre agentes.
 - Comentarios devem ser curtos, objetivos e atualizados a cada mudanca relevante.
 - Preferir registrar intencao antes de grandes edicoes.
+- A pasta `Skills` sera usada como local compartilhado para armazenar skills instaladas ou criadas para o repositorio.
 
 ## Bloqueios
 
@@ -41,6 +43,7 @@ Nenhum no momento.
 - Claude pode ler este arquivo antes de iniciar alteracoes.
 - Codex e Claude devem atualizar a tabela de tarefas em andamento ao assumir ou concluir trabalho.
 - Quando uma tarefa gerar mudancas grandes, registrar tambem um resumo de arquivos alterados.
+- Instalar ou adicionar novas skills dentro de `Skills/` conforme necessario.
 
 ## Modelo de entrada
 
