@@ -13,6 +13,7 @@ Historico de sincronizacao entre Codex, Claude e outros agentes.
 | Codex | Adicionar regra zero de leitura obrigatoria do sync | `Sync/sync` | concluido |
 | Codex | Dividir sync em arquivo leve, regras e historico | `Sync/sync`, `Sync/rules.md`, `Sync/log.md` | concluido |
 | Codex | Instalar skill `framer-motion-animator` autorizada por `skillinstall` | `Skills/framer-motion-animator/SKILL.md` | concluido |
+| Codex | Instalar skill `caveman` autorizada por `skillinstall` | `Skills/caveman/README.md`, `Skills/caveman/SKILL.md` | concluido |
 
 ## Decisoes
 
