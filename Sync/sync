@@ -1,107 +1,22 @@
 # sync
 
-Arquivo de sincronizacao entre agentes de IA para colaborar neste repositorio.
-
 ## Regra zero
+Ler este arquivo antes de qualquer acao neste repositorio.
 
-- Ler `Sync/sync` deve ser a primeira coisa feita antes de executar qualquer acao neste repositorio.
-- Esta regra vale para Codex, Claude e qualquer outro agente.
-- Nenhum comando, edicao, instalacao, criacao de arquivo, organizacao de pasta ou alteracao de componente deve acontecer antes da leitura deste arquivo.
-
-## Objetivo
-
-Manter Codex, Claude e outros assistentes alinhados durante a criacao, revisao e manutencao de codigo, evitando retrabalho, conflitos e perda de contexto.
-
-## Como usar
-
-1. Antes de editar, leia este arquivo e o historico recente do repositorio.
-2. Registre abaixo o que voce pretende fazer.
-3. Ao terminar, atualize o status com arquivos alterados, decisoes tomadas e proximos passos.
-4. Se encontrar conflito ou duvida arquitetural, pare e registre a pergunta em `Bloqueios`.
-5. Para componentes Framer, siga sempre a secao `Regras para componentes Framer` antes de criar ou alterar codigo.
-
-## Estado atual
-
+## Estado
 - Projeto: Framer Components
-- Ultima sincronizacao: 2026-08-11
-- Responsavel pelo registro inicial: Codex
-- Status: regra zero adicionada; estrutura de empresas criada dentro de `Framer Codes Component`; pasta `Skills` pronta para receber skills somente mediante `skillinstall`
+- Branch: claude/codex-main-communication-check-nmx2yc
+- Status: pronto para colaboracao Codex/Claude
+- Trabalho atual: nenhum
+- Bloqueios: nenhum
 
-## Regras globais
+## Regras obrigatorias
+- Instalar skills somente quando o usuario declarar `skillinstall`.
+- Componentes Framer ficam em `Framer Codes Component/{EMPRESA}/`.
+- Para regras completas, ler `Sync/rules.md` somente quando a tarefa exigir.
+- Para historico, ler `Sync/log.md` somente quando precisar de contexto antigo.
 
-- Ler `Sync/sync` sempre vem antes de qualquer outra acao no repositorio.
-- Skills so podem ser instaladas dentro de `Skills/` quando o usuario declarar explicitamente o comando `skillinstall`.
-- Sem `skillinstall`, agentes podem sugerir, planejar, revisar ou preparar conteudo de skills, mas nao instalar skills.
-- Antes de qualquer mudanca relevante, atualizar ou consultar este arquivo.
-- Preferir commits pequenos e mensagens objetivas.
-- Nao sobrescrever trabalho de outro agente sem registrar o motivo em `Decisoes` ou `Bloqueios`.
-
-## Organizacao do repositorio
-
-- `Sync/`: arquivos de coordenacao entre Codex, Claude e outros agentes.
-- `Skills/`: skills instaladas ou criadas para o repositorio, apenas mediante comando `skillinstall`.
-- `Framer Codes Component/`: componentes Framer organizados por empresa.
-- `Framer Codes Component/AYVU/`: componentes criados para AYVU.
-- `Framer Codes Component/COLLATERAL PARTNERS/`: componentes criados para Collateral Partners.
-- `Framer Codes Component/MEMP/`: componentes criados para MEMP.
-- `Framer Codes Component/FRAMER SKILLS/`: componentes, exemplos ou utilitarios relacionados a Framer Skills.
-
-## Regras para componentes Framer
-
-Sempre que Codex, Claude ou outro agente criar um componente Framer neste repositorio, o componente deve seguir estas regras:
-
-1. Criar o componente dentro da pasta correta da empresa em `Framer Codes Component/`.
-2. Criar componentes em React/TypeScript quando aplicavel, mantendo compatibilidade com Framer.
-3. Definir `propertyControls` claros para todas as configuracoes editaveis no Framer.
-4. Expor textos, cores, imagens, links, variantes e valores numericos importantes como propriedades configuraveis.
-5. Usar nomes de props descritivos e estaveis.
-6. Evitar dependencias externas desnecessarias; quando forem necessarias, registrar a decisao em `Decisoes`.
-7. Manter layout responsivo e previsivel dentro do canvas do Framer.
-8. Evitar estilos globais que possam afetar outros componentes.
-9. Preferir animacoes performaticas com transform/opacity.
-10. Garantir que textos nao estourem os limites visuais do componente.
-11. Documentar no proprio arquivo apenas comentarios curtos quando houver logica nao obvia.
-12. Ao concluir, registrar na tabela `Tarefas em andamento` quais componentes foram criados ou alterados.
-
-## Tarefas em andamento
-
-| Agente | Tarefa | Arquivos | Status | Atualizado em |
-| --- | --- | --- | --- | --- |
-| Codex | Criar arquivo de sincronizacao | `sync` | concluido | 2026-08-11 |
-| Codex | Criar pasta para instalacao de skills | `Skills/.gitkeep`, `sync` | concluido | 2026-08-11 |
-| Codex | Mover sync para pasta dedicada e adicionar regras Framer | `Sync/sync`, `sync` | concluido | 2026-08-11 |
-| Codex | Criar estrutura de empresas para componentes Framer | `Framer Codes Component/AYVU/.gitkeep`, `Framer Codes Component/COLLATERAL PARTNERS/.gitkeep`, `Framer Codes Component/MEMP/.gitkeep`, `Framer Codes Component/FRAMER SKILLS/.gitkeep`, `Sync/sync` | concluido | 2026-08-11 |
-| Codex | Adicionar regra zero de leitura obrigatoria do sync | `Sync/sync` | concluido | 2026-08-11 |
-
-## Decisoes
-
-- Este arquivo sera a fonte simples de coordenacao entre agentes.
-- Comentarios devem ser curtos, objetivos e atualizados a cada mudanca relevante.
-- Preferir registrar intencao antes de grandes edicoes.
-- A pasta `Skills` sera usada como local compartilhado para armazenar skills instaladas ou criadas para o repositorio.
-- A pasta `Sync` sera usada para guardar arquivos de coordenacao entre agentes.
-- Regras para componentes Framer devem ficar neste arquivo para que Codex e Claude consultem antes de criar componentes.
-- Componentes Framer devem ser separados por empresa dentro de `Framer Codes Component/`.
-- A leitura de `Sync/sync` e a primeira etapa obrigatoria antes de qualquer acao no repositorio.
-
-## Bloqueios
-
-Nenhum no momento.
-
-## Proximos passos
-
-- Claude deve ler `Sync/sync` antes de qualquer comando ou alteracao.
-- Codex deve ler `Sync/sync` antes de qualquer comando ou alteracao.
-- Codex e Claude devem atualizar a tabela de tarefas em andamento ao assumir ou concluir trabalho.
-- Quando uma tarefa gerar mudancas grandes, registrar tambem um resumo de arquivos alterados.
-- Instalar ou adicionar novas skills dentro de `Skills/` somente quando o usuario declarar `skillinstall`.
-- Ajustar as regras de componentes Framer conforme o projeto evoluir.
-- Criar novos componentes sempre dentro da pasta da empresa correspondente.
-
-## Modelo de entrada
-
-Use este formato ao adicionar uma nova atualizacao:
-
-```md
-| NomeDoAgente | Descricao curta da tarefa | `arquivo1`, `arquivo2` | em andamento/concluido/bloqueado | AAAA-MM-DD |
-```
+## Pastas principais
+- `Sync/`: coordenacao entre agentes.
+- `Skills/`: skills do repositorio.
+- `Framer Codes Component/`: componentes separados por empresa.
