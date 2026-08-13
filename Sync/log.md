@@ -30,6 +30,7 @@ Historico de sincronizacao entre Codex, Claude e outros agentes.
 | Claude | Detectar campo File do CMS (mp4 importado): Framer renderiza esse campo como link <a href>, nao <video>; extracao agora identifica links apontando para arquivos de video e os reproduz como slide de video | `Framer Codes Component/AYVU/CMSGallerySlideshow.tsx`, `Sync/log.md` | concluido |
 | Claude | Adicionar prop de nivel superior "Video (CMS)" (ControlType.File) e "Video visivel" (Boolean) para vinculo direto via variavel do CMS, independente do modo de origem | `Framer Codes Component/AYVU/CMSGallerySlideshow.tsx`, `Sync/log.md` | concluido |
 | Claude | Adicionar prop "Posicao do video" (Primeiro/Ultimo) para escolher se o video do CMS aparece antes ou depois das imagens da galeria | `Framer Codes Component/AYVU/CMSGallerySlideshow.tsx`, `Sync/log.md` | concluido |
+| Claude | Remover transicoes animadas (fade/slide/zoom) entre slides: troca agora e instantanea (corte direto), sem AnimatePresence; drag/peek em tempo real mantido | `Framer Codes Component/AYVU/CMSGallerySlideshow.tsx`, `Sync/log.md` | concluido |
 
 ## Decisoes
 

@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from "react"
-import { AnimatePresence, motion, type PanInfo } from "framer-motion"
+import { motion, type PanInfo } from "framer-motion"
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
 
 /**
@@ -111,7 +111,6 @@ interface CMSGallerySlideshowProps {
     pauseOnHover: boolean
     loop: boolean
     waitForVideo: boolean
-    transitionStyle: "fade" | "slide" | "zoom"
     objectFit: "cover" | "contain" | "fill"
     borderRadius: number
     arrows: ArrowsSettings
@@ -263,7 +262,6 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
         pauseOnHover = true,
         loop = true,
         waitForVideo = true,
-        transitionStyle = "fade",
         objectFit = "cover",
         borderRadius = 0,
         arrows = defaultArrows,
@@ -274,7 +272,6 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
     const isOnCanvas = RenderTarget.current() === RenderTarget.canvas
 
     const [index, setIndex] = useState(0)
-    const [direction, setDirection] = useState(1)
     const [isHovering, setIsHovering] = useState(false)
     const [canvasSlides, setCanvasSlides] = useState<GallerySlide[]>([])
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -422,9 +419,8 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
         setIndex(clamped)
     }, [isOnCanvas, previewIndex, maxIndex, total])
 
-    const goTo = (nextIndex: number, dir: number) => {
+    const goTo = (nextIndex: number) => {
         if (total === 0) return
-        setDirection(dir)
         if (loop) {
             setIndex(((nextIndex % total) + total) % total)
         } else {
@@ -432,8 +428,8 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
         }
     }
 
-    const goNext = () => goTo(index + 1, 1)
-    const goPrev = () => goTo(index - 1, -1)
+    const goNext = () => goTo(index + 1)
+    const goPrev = () => goTo(index - 1)
 
     // Enquanto o usuário arrasta, o slide vizinho (próximo ou anterior)
     // aparece já encostado na borda que está sendo revelada, acompanhando o
@@ -459,7 +455,6 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
         if (pauseOnHover && isHovering) return
 
         timerRef.current = setInterval(() => {
-            setDirection(1)
             setIndex((current) => {
                 const next = current + 1
                 if (next >= total) {
@@ -543,26 +538,6 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
             />
         )
     }
-
-    const variants = {
-        fade: {
-            initial: { opacity: 0 },
-            animate: { opacity: 1 },
-            exit: { opacity: 0 },
-        },
-        slide: {
-            initial: (dir: number) => ({ x: dir > 0 ? "100%" : "-100%", opacity: 1 }),
-            animate: { x: "0%", opacity: 1 },
-            exit: (dir: number) => ({ x: dir > 0 ? "-100%" : "100%", opacity: 1 }),
-        },
-        zoom: {
-            initial: { opacity: 0, scale: 1.08 },
-            animate: { opacity: 1, scale: 1 },
-            exit: { opacity: 0, scale: 0.96 },
-        },
-    } as const
-
-    const activeVariant = variants[transitionStyle] ?? variants.fade
 
     const isGroupedArrows = arrows.layout === "grouped"
     const arrowsEffectivePosition = isGroupedArrows
@@ -720,7 +695,7 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
                     <motion.button
                         key={dotIndex}
                         aria-label={`Ir para a imagem ${dotIndex + 1}`}
-                        onClick={() => goTo(dotIndex, dotIndex > index ? 1 : -1)}
+                        onClick={() => goTo(dotIndex)}
                         whileTap={{ scale: 0.85 }}
                         animate={{
                             scale: isActive ? 1.15 : 1,
@@ -795,60 +770,53 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
                             </div>
                         )}
 
-                        <AnimatePresence initial={false} custom={direction} mode="popLayout">
-                            <motion.div
-                                key={index}
-                                custom={direction}
-                                variants={activeVariant}
-                                initial="initial"
-                                animate="animate"
-                                exit="exit"
-                                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                                drag={hasMultiple ? "x" : false}
-                                dragConstraints={{ left: 0, right: 0 }}
-                                dragElastic={1}
-                                style={slideStyle}
-                                onDrag={handleDrag}
-                                onDragEnd={handleDragEnd}
-                            >
-                                {currentSlide?.type === "video" ? (
-                                    <video
-                                        ref={videoRef}
-                                        src={currentSlide.src}
-                                        poster={currentSlide.poster}
-                                        aria-label={currentSlide.alt ?? ""}
-                                        autoPlay
-                                        muted
-                                        loop={!waitForVideo}
-                                        playsInline
-                                        onEnded={() => {
-                                            if (waitForVideo) goNext()
-                                        }}
-                                        style={{
-                                            width: "100%",
-                                            height: "100%",
-                                            objectFit,
-                                            display: "block",
-                                            pointerEvents: "none",
-                                        }}
-                                    />
-                                ) : (
-                                    <img
-                                        src={currentSlide?.src}
-                                        alt={currentSlide?.alt ?? ""}
-                                        style={{
-                                            width: "100%",
-                                            height: "100%",
-                                            objectFit,
-                                            display: "block",
-                                            pointerEvents: "none",
-                                            userSelect: "none",
-                                        }}
-                                        draggable={false}
-                                    />
-                                )}
-                            </motion.div>
-                        </AnimatePresence>
+                        <motion.div
+                            key={index}
+                            drag={hasMultiple ? "x" : false}
+                            dragConstraints={{ left: 0, right: 0 }}
+                            dragElastic={1}
+                            dragTransition={{ bounceStiffness: 800, bounceDamping: 40 }}
+                            style={slideStyle}
+                            onDrag={handleDrag}
+                            onDragEnd={handleDragEnd}
+                        >
+                            {currentSlide?.type === "video" ? (
+                                <video
+                                    ref={videoRef}
+                                    src={currentSlide.src}
+                                    poster={currentSlide.poster}
+                                    aria-label={currentSlide.alt ?? ""}
+                                    autoPlay
+                                    muted
+                                    loop={!waitForVideo}
+                                    playsInline
+                                    onEnded={() => {
+                                        if (waitForVideo) goNext()
+                                    }}
+                                    style={{
+                                        width: "100%",
+                                        height: "100%",
+                                        objectFit,
+                                        display: "block",
+                                        pointerEvents: "none",
+                                    }}
+                                />
+                            ) : (
+                                <img
+                                    src={currentSlide?.src}
+                                    alt={currentSlide?.alt ?? ""}
+                                    style={{
+                                        width: "100%",
+                                        height: "100%",
+                                        objectFit,
+                                        display: "block",
+                                        pointerEvents: "none",
+                                        userSelect: "none",
+                                    }}
+                                    draggable={false}
+                                />
+                            )}
+                        </motion.div>
 
                         {arrowsOverlay &&
                             (isGroupedArrows ? (
@@ -1120,13 +1088,6 @@ addPropertyControls(CMSGallerySlideshow, {
         optionTitles: ["Primeiro", "Último"],
         defaultValue: "last",
         hidden: (props) => !props.cmsVideoFile,
-    },
-    transitionStyle: {
-        type: ControlType.Enum,
-        title: "Transição",
-        options: ["fade", "slide", "zoom"],
-        optionTitles: ["Fade", "Slide", "Zoom"],
-        defaultValue: "fade",
     },
     autoplay: {
         type: ControlType.Boolean,
