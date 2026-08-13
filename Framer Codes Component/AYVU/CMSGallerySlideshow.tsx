@@ -5,10 +5,13 @@ import { addPropertyControls, ControlType } from "framer"
 /**
  * CMS Gallery Slideshow
  *
- * Conecta a uma Collection do CMS: arraste este componente para dentro de um
- * Collection List/Grid e, no painel de propriedades, use o seletor "Galeria"
- * para vincular o campo do tipo Gallery da sua Collection. O componente
- * exibe as imagens desse campo em formato de slideshow.
+ * Duas formas de conectar ao CMS:
+ * 1. Canvas (recomendado): use o seletor "Elemento CMS" para apontar para
+ *    qualquer elemento já no canvas conectado à sua Collection (Collection
+ *    List/Grid com um campo Gallery). O componente lê as imagens renderizadas
+ *    dentro dele automaticamente, inclusive quando o CMS atualiza.
+ * 2. Manual: arraste este componente para dentro de um Collection List e
+ *    vincule o campo Gallery diretamente na prop "Galeria".
  *
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
@@ -17,7 +20,9 @@ import { addPropertyControls, ControlType } from "framer"
  */
 export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
     const {
-        images = [],
+        dataSource = "canvas",
+        source,
+        images: manualImages = [],
         autoplay = true,
         interval = 4,
         pauseOnHover = true,
@@ -36,8 +41,61 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
     const [index, setIndex] = useState(0)
     const [direction, setDirection] = useState(1)
     const [isHovering, setIsHovering] = useState(false)
+    const [canvasImages, setCanvasImages] = useState<GalleryImage[]>([])
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+    // Modo "canvas": lê as <img> renderizadas dentro do elemento apontado
+    // pelo seletor (ex.: um Collection List já conectado à Collection do
+    // CMS) e observa mutações para acompanhar atualizações do CMS.
+    useEffect(() => {
+        if (dataSource !== "canvas") return
+
+        const node = source?.current
+        if (!node) {
+            setCanvasImages([])
+            return
+        }
+
+        const extractImages = () => {
+            const seen = new Set<string>()
+            const found: GalleryImage[] = []
+
+            node.querySelectorAll("img").forEach((img) => {
+                const src = img.currentSrc || img.src
+                if (!src || seen.has(src)) return
+                seen.add(src)
+                found.push({ src, alt: img.alt })
+            })
+
+            node.querySelectorAll<HTMLElement>(
+                "[style*='background-image']"
+            ).forEach((el) => {
+                const match = el.style.backgroundImage.match(
+                    /url\(["']?(.*?)["']?\)/
+                )
+                const src = match?.[1]
+                if (!src || seen.has(src)) return
+                seen.add(src)
+                found.push({ src, alt: el.getAttribute("aria-label") ?? "" })
+            })
+
+            setCanvasImages(found)
+        }
+
+        extractImages()
+
+        const observer = new MutationObserver(extractImages)
+        observer.observe(node, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ["src", "srcset", "style"],
+        })
+
+        return () => observer.disconnect()
+    }, [dataSource, source])
+
+    const images = dataSource === "canvas" ? canvasImages : manualImages
     const total = images.length
     const hasMultiple = total > 1
 
@@ -123,8 +181,9 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
                     padding: 16,
                 }}
             >
-                Conecte este componente a uma Collection e selecione o campo de
-                Galeria no painel de propriedades.
+                {dataSource === "canvas"
+                    ? "Selecione, no painel de propriedades, um elemento do canvas conectado à sua Collection do CMS (ex.: um Collection List com campo Gallery)."
+                    : "Conecte este componente a uma Collection e selecione o campo de Galeria no painel de propriedades."}
             </div>
         )
     }
@@ -221,6 +280,8 @@ interface GalleryImage {
 }
 
 interface CMSGallerySlideshowProps {
+    dataSource: "canvas" | "manual"
+    source?: React.RefObject<HTMLElement>
     images: GalleryImage[]
     autoplay: boolean
     interval: number
@@ -303,6 +364,20 @@ const dotStyle: React.CSSProperties = {
 }
 
 addPropertyControls(CMSGallerySlideshow, {
+    dataSource: {
+        type: ControlType.Enum,
+        title: "Origem",
+        options: ["canvas", "manual"],
+        optionTitles: ["Selecionar no Canvas", "Manual / Collection List"],
+        defaultValue: "canvas",
+    },
+    source: {
+        type: ControlType.ComponentInstance,
+        title: "Elemento CMS",
+        description:
+            "Selecione no canvas o elemento já conectado à sua Collection do CMS (ex.: um Collection List/Grid com campo Gallery). As imagens renderizadas dentro dele são usadas no slideshow.",
+        hidden: (props) => props.dataSource !== "canvas",
+    },
     images: {
         type: ControlType.Array,
         title: "Galeria",
@@ -311,6 +386,7 @@ addPropertyControls(CMSGallerySlideshow, {
         control: {
             type: ControlType.ResponsiveImage,
         },
+        hidden: (props) => props.dataSource !== "manual",
     },
     transitionStyle: {
         type: ControlType.Enum,
