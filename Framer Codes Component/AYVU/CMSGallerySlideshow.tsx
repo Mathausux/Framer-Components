@@ -1,25 +1,24 @@
 import { useLayoutEffect, useRef, useState } from "react"
-import { motion, type PanInfo } from "framer-motion"
+import { AnimatePresence, motion, type PanInfo } from "framer-motion"
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
 
 /**
  * CMS Gallery Slideshow
  *
- * Duas formas de conectar ao CMS:
- * 1. Canvas (recomendado): conecte, no seletor "Elemento CMS", um Collection
- *    List/Grid já vinculado à sua Collection (com um campo Gallery). O
- *    elemento conectado é renderizado internamente (invisível) e o
- *    componente lê as imagens e vídeos que ele produz, acompanhando
- *    atualizações via MutationObserver. Framer não permite que componentes
- *    de código leiam dados do CMS diretamente — por isso a leitura acontece
- *    no DOM já renderizado, não em uma API de dados.
- * 2. Manual: adicione itens diretamente na prop "Itens" — cada item pode
- *    ser uma imagem ou um vídeo.
+ * Two ways to connect to the CMS:
+ * 1. Canvas (recommended): use the "CMS Element" selector to connect a
+ *    Collection List/Grid already linked to your Collection (with a
+ *    Gallery field). The connected element is rendered internally
+ *    (invisible) and this component reads the images/videos it produces,
+ *    tracking updates via MutationObserver. Framer does not allow code
+ *    components to read CMS data directly — so this reads the already
+ *    rendered DOM instead of a data API.
+ * 2. Manual: add items directly in the "Items" prop — each item can be an
+ *    image or a video.
  *
- * Slides podem ser imagem ou vídeo (com opção de aguardar o vídeo terminar
- * antes de avançar). Setas, indicadores (dots) e contador são totalmente
- * configuráveis: posição, tamanho, cores, blur, contorno e (para setas)
- * layout separado/agrupado.
+ * A slide can be an image or a video (with an option to wait for the video
+ * to finish before advancing). Transition (style/duration/easing/autoplay/
+ * loop/drag), Arrows, Dots and Counter are fully configurable.
  *
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
@@ -55,6 +54,17 @@ interface ManualItem {
     video?: string
     poster?: { src: string }
     alt?: string
+}
+
+interface TransitionSettings {
+    style: "slide" | "fade"
+    duration: number
+    easing: "linear" | "easeIn" | "easeOut" | "easeInOut"
+    autoplay: boolean
+    autoplayInterval: number
+    pauseOnHover: boolean
+    loop: boolean
+    enableDrag: boolean
 }
 
 interface ArrowsSettings {
@@ -106,11 +116,8 @@ interface CMSGallerySlideshowProps {
     cmsVideoFile?: string
     cmsVideoVisible: boolean
     cmsVideoPosition: "first" | "last"
-    autoplay: boolean
-    interval: number
-    pauseOnHover: boolean
-    loop: boolean
     waitForVideo: boolean
+    transition: TransitionSettings
     objectFit: "cover" | "contain" | "fill"
     borderRadius: number
     arrows: ArrowsSettings
@@ -121,6 +128,17 @@ interface CMSGallerySlideshowProps {
 // ---------------------------------------------------------------------------
 // Defaults
 // ---------------------------------------------------------------------------
+
+const defaultTransition: TransitionSettings = {
+    style: "slide",
+    duration: 0.5,
+    easing: "easeInOut",
+    autoplay: true,
+    autoplayInterval: 4,
+    pauseOnHover: true,
+    loop: true,
+    enableDrag: true,
+}
 
 const defaultArrows: ArrowsSettings = {
     show: true,
@@ -204,10 +222,12 @@ function getArrowVerticalStyle(
             return { bottom: inset }
         case "center":
         default:
-            // Evita `transform: translateY(-50%)`: uma vez que o Framer
-            // Motion anima o elemento, ele passa a controlar `transform`
-            // por inteiro e descarta o que foi setado via style — usar
-            // marginTop centraliza sem depender de transform.
+            // Deliberately not using `transform: translateY(-50%)` here.
+            // These buttons are motion.button elements — once Framer
+            // Motion animates a component, it fully owns the `transform`
+            // CSS property and silently drops any transform set via
+            // style. marginTop achieves the same vertical centering
+            // without touching `transform`.
             return { top: "50%", marginTop: -size / 2 }
     }
 }
@@ -257,11 +277,8 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
         cmsVideoFile,
         cmsVideoVisible = true,
         cmsVideoPosition = "last",
-        autoplay = true,
-        interval = 4,
-        pauseOnHover = true,
-        loop = true,
         waitForVideo = true,
+        transition = defaultTransition,
         objectFit = "cover",
         borderRadius = 0,
         arrows = defaultArrows,
@@ -272,18 +289,18 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
     const isOnCanvas = RenderTarget.current() === RenderTarget.canvas
 
     const [index, setIndex] = useState(0)
+    const [direction, setDirection] = useState(1)
     const [isHovering, setIsHovering] = useState(false)
     const [canvasSlides, setCanvasSlides] = useState<GallerySlide[]>([])
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
     const collectionWrapperRef = useRef<HTMLDivElement>(null)
     const videoRef = useRef<HTMLVideoElement>(null)
 
-    // Modo "canvas": o elemento conectado via ControlType.ComponentInstance
-    // (ex.: um Collection List já vinculado à Collection) é renderizado
-    // dentro de collectionWrapperRef, invisível. Depois de montado, lemos as
-    // <img>/<video>/background-image produzidas por ele, na ordem em que
-    // aparecem no DOM, e observamos mutações para acompanhar trocas de
-    // dados do CMS.
+    // "Canvas" mode: the element connected via ControlType.ComponentInstance
+    // (e.g. a Collection List already linked to the Collection) is rendered
+    // inside collectionWrapperRef, invisible. Once mounted, we read the
+    // <img>/<video>/background-image it produces, in the order they appear
+    // in the DOM, and observe mutations to track CMS data changes.
     useLayoutEffect(() => {
         if (dataSource !== "canvas") {
             setCanvasSlides([])
@@ -322,9 +339,9 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
                 }
             })
 
-            // Um campo do tipo File (usado para importar .mp4 no CMS) é
-            // renderizado pela Framer como um link, não como <video>. Detecta
-            // qualquer <a href> apontando para um arquivo de vídeo.
+            // A File field (used to import an .mp4 in the CMS) is rendered
+            // by Framer as a link, not as a <video>. Detect any <a href>
+            // pointing to a video file.
             node.querySelectorAll<HTMLAnchorElement>("a[href]").forEach(
                 (a) => {
                     const href = a.href
@@ -391,10 +408,10 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
         })
         .filter((slide): slide is GallerySlide => slide !== null)
 
-    // Vídeo vinculado diretamente a uma variável do CMS (campo File), útil
-    // quando este componente é colocado como o próprio item repetido dentro
-    // de um Collection List. "Visível" permite ligar a um campo Boolean do
-    // CMS para esconder o vídeo em registros que não o possuem.
+    // Video bound directly to a CMS variable (File field), useful when this
+    // component is placed as the repeated item itself inside a Collection
+    // List. "Visible" can be bound to a Boolean CMS field to hide the video
+    // on records that don't have one.
     const cmsVideoSlides: GallerySlide[] =
         cmsVideoVisible && cmsVideoFile
             ? [{ type: "video", src: cmsVideoFile }]
@@ -409,72 +426,75 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
     const hasMultiple = total > 1
     const maxIndex = Math.max(0, total - 1)
 
-    // No Canvas do editor, o Collection List conectado pode demorar mais
-    // para popular seus dados reais do CMS (ou usar dados de exemplo) do que
-    // no Preview/site publicado. Enquanto isso, deixe escolher manualmente
-    // qual slide visualizar através da prop "Slide (Canvas)".
+    // On the Canvas editor, the connected Collection List may take longer
+    // to populate its real CMS data (or use placeholder data) than in
+    // Preview/the published site. Meanwhile, let the user manually pick
+    // which slide to view via the "Preview Slide" property.
     useLayoutEffect(() => {
         if (!isOnCanvas || total === 0) return
         const clamped = Math.max(0, Math.min(maxIndex, previewIndex ?? 0))
         setIndex(clamped)
     }, [isOnCanvas, previewIndex, maxIndex, total])
 
-    const goTo = (nextIndex: number) => {
+    const goTo = (nextIndex: number, dir: number) => {
         if (total === 0) return
-        if (loop) {
+        setDirection(dir)
+        if (transition.loop) {
             setIndex(((nextIndex % total) + total) % total)
         } else {
             setIndex(Math.min(Math.max(nextIndex, 0), total - 1))
         }
     }
 
-    const goNext = () => goTo(index + 1)
-    const goPrev = () => goTo(index - 1)
+    const goNext = () => goTo(index + 1, 1)
+    const goPrev = () => goTo(index - 1, -1)
 
-    // Enquanto o usuário arrasta, o slide vizinho (próximo ou anterior)
-    // aparece já encostado na borda que está sendo revelada, acompanhando o
-    // dedo em tempo real, em vez de mostrar o fundo do container por baixo
-    // do slide atual.
+    // While dragging, the neighboring slide (next or previous) already sits
+    // against the edge being revealed, following the finger in real time,
+    // instead of showing the container background behind the current slide.
     const [peekDirection, setPeekDirection] = useState<0 | 1 | -1>(0)
     const [dragOffsetPx, setDragOffsetPx] = useState(0)
 
     const currentSlide = slides[index]
-    const nextSlide = loop
+    const nextSlide = transition.loop
         ? slides[(index + 1) % Math.max(total, 1)]
         : slides[index + 1]
-    const prevSlide = loop
+    const prevSlide = transition.loop
         ? slides[(index - 1 + Math.max(total, 1)) % Math.max(total, 1)]
         : slides[index - 1]
     const currentIsVideo = currentSlide?.type === "video"
-    // Se o slide atual é um vídeo e "Aguardar vídeo" está ativo, o avanço
-    // não usa o intervalo — ele acontece pelo evento onEnded do <video>.
-    const autoAdvanceByTimer = autoplay && !(currentIsVideo && waitForVideo)
+    // If the current slide is a video and "Wait for Video" is on, advancing
+    // does not use the interval — it happens via the <video>'s onEnded
+    // event instead.
+    const autoAdvanceByTimer =
+        transition.autoplay && !(currentIsVideo && waitForVideo)
 
     useLayoutEffect(() => {
         if (!autoAdvanceByTimer || !hasMultiple) return
-        if (pauseOnHover && isHovering) return
+        if (transition.pauseOnHover && isHovering) return
 
         timerRef.current = setInterval(() => {
+            setDirection(1)
             setIndex((current) => {
                 const next = current + 1
                 if (next >= total) {
-                    return loop ? 0 : current
+                    return transition.loop ? 0 : current
                 }
                 return next
             })
-        }, Math.max(interval, 0.5) * 1000)
+        }, Math.max(transition.autoplayInterval, 0.5) * 1000)
 
         return () => {
             if (timerRef.current) clearInterval(timerRef.current)
         }
     }, [
         autoAdvanceByTimer,
-        interval,
-        pauseOnHover,
+        transition.autoplayInterval,
+        transition.pauseOnHover,
         isHovering,
         hasMultiple,
         total,
-        loop,
+        transition.loop,
     ])
 
     const handleDrag = (
@@ -539,6 +559,28 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
         )
     }
 
+    const variants = {
+        fade: {
+            initial: { opacity: 0 },
+            animate: { opacity: 1 },
+            exit: { opacity: 0 },
+        },
+        slide: {
+            initial: (dir: number) => ({
+                x: dir > 0 ? "100%" : "-100%",
+                opacity: 1,
+            }),
+            animate: { x: "0%", opacity: 1 },
+            exit: (dir: number) => ({
+                x: dir > 0 ? "-100%" : "100%",
+                opacity: 1,
+            }),
+        },
+    } as const
+
+    const activeVariant = variants[transition.style] ?? variants.fade
+    const dragEnabled = transition.enableDrag && hasMultiple
+
     const isGroupedArrows = arrows.layout === "grouped"
     const arrowsEffectivePosition = isGroupedArrows
         ? arrows.groupedPosition
@@ -556,8 +598,8 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
 
     const hasBottomBar = arrowsOutside || dotsOutside || counterOutside
 
-    const isPrevDisabled = !loop && index <= 0
-    const isNextDisabled = !loop && index >= maxIndex
+    const isPrevDisabled = !transition.loop && index <= 0
+    const isNextDisabled = !transition.loop && index >= maxIndex
 
     const arrowButtonBaseStyle = (disabled: boolean): React.CSSProperties => ({
         width: arrows.size,
@@ -583,7 +625,7 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
     const renderArrowButtonsSplit = (positioned: boolean) => (
         <>
             <motion.button
-                aria-label="Imagem anterior"
+                aria-label="Previous slide"
                 onClick={goPrev}
                 disabled={isPrevDisabled}
                 whileTap={isPrevDisabled ? undefined : { scale: 0.9 }}
@@ -608,7 +650,7 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
                 />
             </motion.button>
             <motion.button
-                aria-label="Próxima imagem"
+                aria-label="Next slide"
                 onClick={goNext}
                 disabled={isNextDisabled}
                 whileTap={isNextDisabled ? undefined : { scale: 0.9 }}
@@ -644,7 +686,7 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
             }}
         >
             <motion.button
-                aria-label="Imagem anterior"
+                aria-label="Previous slide"
                 onClick={goPrev}
                 disabled={isPrevDisabled}
                 whileTap={isPrevDisabled ? undefined : { scale: 0.9 }}
@@ -657,7 +699,7 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
                 />
             </motion.button>
             <motion.button
-                aria-label="Próxima imagem"
+                aria-label="Next slide"
                 onClick={goNext}
                 disabled={isNextDisabled}
                 whileTap={isNextDisabled ? undefined : { scale: 0.9 }}
@@ -694,8 +736,10 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
                 return (
                     <motion.button
                         key={dotIndex}
-                        aria-label={`Ir para a imagem ${dotIndex + 1}`}
-                        onClick={() => goTo(dotIndex)}
+                        aria-label={`Go to slide ${dotIndex + 1}`}
+                        onClick={() =>
+                            goTo(dotIndex, dotIndex > index ? 1 : -1)
+                        }
                         whileTap={{ scale: 0.85 }}
                         animate={{
                             scale: isActive ? 1.15 : 1,
@@ -749,9 +793,9 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
                     <div style={emptyStateStyle}>
                         {dataSource === "canvas"
                             ? collectionSource
-                                ? "Nenhuma imagem ou vídeo encontrado dentro do elemento conectado. Confirme que ele está vinculado a uma Collection com campo Gallery."
-                                : "Conecte, no painel de propriedades, um Collection List já vinculado à sua Collection do CMS através do seletor \"Elemento CMS\"."
-                            : "Adicione itens (imagem ou vídeo) na prop \"Itens\" no painel de propriedades."}
+                                ? "No image or video found inside the connected element. Make sure it's linked to a Collection with a Gallery field."
+                                : "Connect a Collection List already linked to your CMS Collection using the \"CMS Element\" selector in the properties panel."
+                            : "Add items (image or video) in the \"Items\" property panel."}
                     </div>
                 ) : (
                     <>
@@ -770,53 +814,67 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
                             </div>
                         )}
 
-                        <motion.div
-                            key={index}
-                            drag={hasMultiple ? "x" : false}
-                            dragConstraints={{ left: 0, right: 0 }}
-                            dragElastic={1}
-                            dragTransition={{ bounceStiffness: 800, bounceDamping: 40 }}
-                            style={slideStyle}
-                            onDrag={handleDrag}
-                            onDragEnd={handleDragEnd}
+                        <AnimatePresence
+                            initial={false}
+                            custom={direction}
+                            mode="popLayout"
                         >
-                            {currentSlide?.type === "video" ? (
-                                <video
-                                    ref={videoRef}
-                                    src={currentSlide.src}
-                                    poster={currentSlide.poster}
-                                    aria-label={currentSlide.alt ?? ""}
-                                    autoPlay
-                                    muted
-                                    loop={!waitForVideo}
-                                    playsInline
-                                    onEnded={() => {
-                                        if (waitForVideo) goNext()
-                                    }}
-                                    style={{
-                                        width: "100%",
-                                        height: "100%",
-                                        objectFit,
-                                        display: "block",
-                                        pointerEvents: "none",
-                                    }}
-                                />
-                            ) : (
-                                <img
-                                    src={currentSlide?.src}
-                                    alt={currentSlide?.alt ?? ""}
-                                    style={{
-                                        width: "100%",
-                                        height: "100%",
-                                        objectFit,
-                                        display: "block",
-                                        pointerEvents: "none",
-                                        userSelect: "none",
-                                    }}
-                                    draggable={false}
-                                />
-                            )}
-                        </motion.div>
+                            <motion.div
+                                key={index}
+                                custom={direction}
+                                variants={activeVariant}
+                                initial="initial"
+                                animate="animate"
+                                exit="exit"
+                                transition={{
+                                    duration: transition.duration,
+                                    ease: transition.easing,
+                                }}
+                                drag={dragEnabled ? "x" : false}
+                                dragConstraints={{ left: 0, right: 0 }}
+                                dragElastic={1}
+                                style={slideStyle}
+                                onDrag={handleDrag}
+                                onDragEnd={handleDragEnd}
+                            >
+                                {currentSlide?.type === "video" ? (
+                                    <video
+                                        ref={videoRef}
+                                        src={currentSlide.src}
+                                        poster={currentSlide.poster}
+                                        aria-label={currentSlide.alt ?? ""}
+                                        autoPlay
+                                        muted
+                                        loop={!waitForVideo}
+                                        playsInline
+                                        onEnded={() => {
+                                            if (waitForVideo) goNext()
+                                        }}
+                                        style={{
+                                            width: "100%",
+                                            height: "100%",
+                                            objectFit,
+                                            display: "block",
+                                            pointerEvents: "none",
+                                        }}
+                                    />
+                                ) : (
+                                    <img
+                                        src={currentSlide?.src}
+                                        alt={currentSlide?.alt ?? ""}
+                                        style={{
+                                            width: "100%",
+                                            height: "100%",
+                                            objectFit,
+                                            display: "block",
+                                            pointerEvents: "none",
+                                            userSelect: "none",
+                                        }}
+                                        draggable={false}
+                                    />
+                                )}
+                            </motion.div>
+                        </AnimatePresence>
 
                         {arrowsOverlay &&
                             (isGroupedArrows ? (
@@ -918,8 +976,8 @@ const frameStyle: React.CSSProperties = {
     overflow: "hidden",
 }
 
-// O Collection List conectado é renderizado aqui, fora da vista, apenas
-// para que possamos ler as imagens que ele produz no DOM.
+// The connected Collection List is rendered here, out of view, only so we
+// can read the images it produces in the DOM.
 const hiddenSourceStyle: React.CSSProperties = {
     position: "absolute",
     inset: 0,
@@ -976,13 +1034,13 @@ const NAV_POSITION_OPTIONS: NavPosition[] = [
     "outside",
 ]
 const NAV_POSITION_TITLES = [
-    "Superior esquerda",
-    "Superior centro",
-    "Superior direita",
-    "Inferior esquerda",
-    "Inferior centro",
-    "Inferior direita",
-    "Fora (abaixo)",
+    "Top Left",
+    "Top Center",
+    "Top Right",
+    "Bottom Left",
+    "Bottom Center",
+    "Bottom Right",
+    "Outside (Below)",
 ]
 
 const ARROW_POSITION_OPTIONS: ArrowsPosition[] = [
@@ -991,68 +1049,68 @@ const ARROW_POSITION_OPTIONS: ArrowsPosition[] = [
     "bottom",
     "outside",
 ]
-const ARROW_POSITION_TITLES = ["Topo", "Centro", "Base", "Fora (abaixo)"]
+const ARROW_POSITION_TITLES = ["Top", "Center", "Bottom", "Outside (Below)"]
 
 addPropertyControls(CMSGallerySlideshow, {
     dataSource: {
         type: ControlType.Enum,
-        title: "Origem",
+        title: "Source",
         options: ["canvas", "manual"],
-        optionTitles: ["Selecionar no Canvas", "Manual / Collection List"],
+        optionTitles: ["Select on Canvas", "Manual / Collection List"],
         defaultValue: "canvas",
     },
     collectionSource: {
         type: ControlType.ComponentInstance,
-        title: "Elemento CMS",
+        title: "CMS Element",
         description:
-            "Conecte um Collection List/Grid já vinculado à sua Collection do CMS (com um campo Gallery). Ele é renderizado internamente (invisível) e as imagens que produz alimentam o slideshow.",
+            "Connect a Collection List/Grid already linked to your CMS Collection (with a Gallery field). It is rendered internally (invisible) and the images it produces feed the slideshow.",
         hidden: (props) => props.dataSource !== "canvas",
     },
     previewIndex: {
         type: ControlType.Number,
-        title: "Slide (Canvas)",
+        title: "Preview Slide",
         min: 0,
         step: 1,
         defaultValue: 0,
         description:
-            "Apenas no Canvas: escolha manualmente qual imagem visualizar enquanto edita, já que os dados reais do CMS podem levar um instante a mais para aparecer no editor do que no Preview.",
+            "Canvas only: manually choose which slide to preview while editing, since real CMS data can take a moment longer to appear in the editor than in Preview.",
         hidden: (props) => props.dataSource !== "canvas",
     },
     items: {
         type: ControlType.Array,
-        title: "Itens",
+        title: "Items",
         description:
-            "Cada item pode ser uma imagem ou um vídeo. Para vincular ao campo Gallery da sua Collection, prefira o modo \"Selecionar no Canvas\".",
+            "Each item can be an image or a video. To bind directly to your Collection's Gallery field, prefer \"Select on Canvas\" instead.",
         control: {
             type: ControlType.Object,
             controls: {
                 mediaType: {
                     type: ControlType.Enum,
-                    title: "Tipo",
+                    title: "Type",
                     options: ["image", "video"],
-                    optionTitles: ["Imagem", "Vídeo"],
+                    optionTitles: ["Image", "Video"],
                     defaultValue: "image",
                     displaySegmentedControl: true,
                 },
                 image: {
                     type: ControlType.ResponsiveImage,
-                    title: "Imagem",
+                    title: "Image",
                     hidden: (item: ManualItem) => item.mediaType !== "image",
                 },
                 video: {
                     type: ControlType.File,
-                    title: "Vídeo",
+                    title: "Video",
                     allowedFileTypes: ["mp4", "webm", "mov", "ogg"],
                     hidden: (item: ManualItem) => item.mediaType !== "video",
                 },
                 poster: {
                     type: ControlType.ResponsiveImage,
-                    title: "Capa (opcional)",
+                    title: "Poster (optional)",
                     hidden: (item: ManualItem) => item.mediaType !== "video",
                 },
                 alt: {
                     type: ControlType.String,
-                    title: "Texto alternativo",
+                    title: "Alt Text",
                     defaultValue: "",
                 },
             },
@@ -1061,69 +1119,115 @@ addPropertyControls(CMSGallerySlideshow, {
     },
     waitForVideo: {
         type: ControlType.Boolean,
-        title: "Aguardar vídeo",
+        title: "Wait for Video",
         defaultValue: true,
         description:
-            "Quando um slide é vídeo, aguarda ele terminar antes de avançar automaticamente, em vez de usar o intervalo fixo.",
+            "When a slide is a video, wait for it to finish before advancing automatically, instead of using the fixed interval.",
     },
     cmsVideoFile: {
         type: ControlType.File,
-        title: "Vídeo (CMS)",
+        title: "Video (CMS)",
         allowedFileTypes: ["mp4", "webm", "mov", "m4v", "ogg"],
         description:
-            "Vincule diretamente a um campo File da sua Collection do CMS usando o ícone de variável — útil quando este componente é usado como o próprio item repetido dentro de um Collection List. Independe do modo \"Origem\" acima.",
+            "Bind directly to a File field of your CMS Collection using the variable icon — useful when this component is used as the repeated item itself inside a Collection List. Independent of the \"Source\" mode above.",
     },
     cmsVideoVisible: {
         type: ControlType.Boolean,
-        title: "Vídeo visível",
+        title: "Video Visible",
         defaultValue: true,
         description:
-            "Pode ser vinculado a um campo Boolean do CMS para esconder o vídeo em registros que não possuem um.",
+            "Can be bound to a Boolean CMS field to hide the video on records that don't have one.",
         hidden: (props) => !props.cmsVideoFile,
     },
     cmsVideoPosition: {
         type: ControlType.Enum,
-        title: "Posição do vídeo",
+        title: "Video Position",
         options: ["first", "last"],
-        optionTitles: ["Primeiro", "Último"],
+        optionTitles: ["First", "Last"],
         defaultValue: "last",
         hidden: (props) => !props.cmsVideoFile,
     },
-    autoplay: {
-        type: ControlType.Boolean,
-        title: "Autoplay",
-        defaultValue: true,
+
+    transition: {
+        type: ControlType.Object,
+        title: "Transition",
+        controls: {
+            style: {
+                type: ControlType.Enum,
+                title: "Type",
+                options: ["slide", "fade"],
+                optionTitles: ["Slide", "Fade"],
+                defaultValue: defaultTransition.style,
+                displaySegmentedControl: true,
+            },
+            duration: {
+                type: ControlType.Number,
+                title: "Duration",
+                min: 0,
+                max: 2,
+                step: 0.05,
+                defaultValue: defaultTransition.duration,
+                unit: "s",
+            },
+            easing: {
+                type: ControlType.Enum,
+                title: "Easing",
+                options: ["linear", "easeIn", "easeOut", "easeInOut"],
+                optionTitles: ["Linear", "Ease In", "Ease Out", "Ease In-Out"],
+                defaultValue: defaultTransition.easing,
+            },
+            autoplay: {
+                type: ControlType.Boolean,
+                title: "Autoplay",
+                defaultValue: defaultTransition.autoplay,
+                enabledTitle: "On",
+                disabledTitle: "Off",
+            },
+            autoplayInterval: {
+                type: ControlType.Number,
+                title: "Interval",
+                min: 1,
+                max: 20,
+                step: 0.5,
+                defaultValue: defaultTransition.autoplayInterval,
+                unit: "s",
+                hidden: (t: TransitionSettings) => !t.autoplay,
+            },
+            pauseOnHover: {
+                type: ControlType.Boolean,
+                title: "Pause on Hover",
+                defaultValue: defaultTransition.pauseOnHover,
+                enabledTitle: "On",
+                disabledTitle: "Off",
+                hidden: (t: TransitionSettings) => !t.autoplay,
+            },
+            loop: {
+                type: ControlType.Boolean,
+                title: "Loop",
+                defaultValue: defaultTransition.loop,
+                enabledTitle: "On",
+                disabledTitle: "Off",
+            },
+            enableDrag: {
+                type: ControlType.Boolean,
+                title: "Drag to Navigate",
+                defaultValue: defaultTransition.enableDrag,
+                enabledTitle: "On",
+                disabledTitle: "Off",
+            },
+        },
     },
-    interval: {
-        type: ControlType.Number,
-        title: "Intervalo (s)",
-        min: 1,
-        max: 20,
-        step: 0.5,
-        defaultValue: 4,
-        hidden: (props) => !props.autoplay,
-    },
-    pauseOnHover: {
-        type: ControlType.Boolean,
-        title: "Pausar no hover",
-        defaultValue: true,
-        hidden: (props) => !props.autoplay,
-    },
-    loop: {
-        type: ControlType.Boolean,
-        title: "Loop",
-        defaultValue: true,
-    },
+
     objectFit: {
         type: ControlType.Enum,
-        title: "Ajuste",
+        title: "Fit",
         options: ["cover", "contain", "fill"],
-        optionTitles: ["Cobrir", "Conter", "Preencher"],
+        optionTitles: ["Cover", "Contain", "Fill"],
         defaultValue: "cover",
     },
     borderRadius: {
         type: ControlType.Number,
-        title: "Raio da borda",
+        title: "Border Radius",
         min: 0,
         max: 100,
         defaultValue: 0,
@@ -1131,25 +1235,25 @@ addPropertyControls(CMSGallerySlideshow, {
 
     arrows: {
         type: ControlType.Object,
-        title: "Setas",
+        title: "Arrows",
         controls: {
             show: {
                 type: ControlType.Boolean,
-                title: "Mostrar",
+                title: "Show",
                 defaultValue: defaultArrows.show,
             },
             layout: {
                 type: ControlType.Enum,
                 title: "Layout",
                 options: ["split", "grouped"],
-                optionTitles: ["Separadas (bordas)", "Agrupadas"],
+                optionTitles: ["Split (Edges)", "Grouped"],
                 defaultValue: defaultArrows.layout,
                 displaySegmentedControl: true,
                 hidden: (a: ArrowsSettings) => !a.show,
             },
             position: {
                 type: ControlType.Enum,
-                title: "Posição",
+                title: "Position",
                 options: ARROW_POSITION_OPTIONS,
                 optionTitles: ARROW_POSITION_TITLES,
                 defaultValue: defaultArrows.position,
@@ -1157,7 +1261,7 @@ addPropertyControls(CMSGallerySlideshow, {
             },
             groupedPosition: {
                 type: ControlType.Enum,
-                title: "Posição",
+                title: "Position",
                 options: NAV_POSITION_OPTIONS,
                 optionTitles: NAV_POSITION_TITLES,
                 defaultValue: defaultArrows.groupedPosition,
@@ -1166,7 +1270,7 @@ addPropertyControls(CMSGallerySlideshow, {
             },
             groupedGap: {
                 type: ControlType.Number,
-                title: "Espaço entre",
+                title: "Button Gap",
                 min: 0,
                 max: 32,
                 step: 1,
@@ -1177,7 +1281,7 @@ addPropertyControls(CMSGallerySlideshow, {
             },
             inset: {
                 type: ControlType.Number,
-                title: "Distância da borda",
+                title: "Inset",
                 min: 0,
                 max: 60,
                 step: 1,
@@ -1187,7 +1291,7 @@ addPropertyControls(CMSGallerySlideshow, {
             },
             size: {
                 type: ControlType.Number,
-                title: "Tamanho",
+                title: "Size",
                 min: 16,
                 max: 96,
                 step: 1,
@@ -1197,7 +1301,7 @@ addPropertyControls(CMSGallerySlideshow, {
             },
             iconSize: {
                 type: ControlType.Number,
-                title: "Tamanho do ícone",
+                title: "Icon Size",
                 min: 6,
                 max: 64,
                 step: 1,
@@ -1207,7 +1311,7 @@ addPropertyControls(CMSGallerySlideshow, {
             },
             radius: {
                 type: ControlType.Number,
-                title: "Raio da borda",
+                title: "Radius",
                 min: 0,
                 max: 999,
                 step: 1,
@@ -1217,19 +1321,19 @@ addPropertyControls(CMSGallerySlideshow, {
             },
             color: {
                 type: ControlType.Color,
-                title: "Cor do ícone",
+                title: "Icon Color",
                 defaultValue: defaultArrows.color,
                 hidden: (a: ArrowsSettings) => !a.show,
             },
             background: {
                 type: ControlType.Color,
-                title: "Fundo",
+                title: "Background",
                 defaultValue: defaultArrows.background,
                 hidden: (a: ArrowsSettings) => !a.show,
             },
             blur: {
                 type: ControlType.Number,
-                title: "Blur do fundo",
+                title: "Background Blur",
                 min: 0,
                 max: 40,
                 step: 1,
@@ -1239,13 +1343,13 @@ addPropertyControls(CMSGallerySlideshow, {
             },
             strokeColor: {
                 type: ControlType.Color,
-                title: "Contorno",
+                title: "Stroke",
                 defaultValue: defaultArrows.strokeColor,
                 hidden: (a: ArrowsSettings) => !a.show,
             },
             strokeWidth: {
                 type: ControlType.Number,
-                title: "Espessura do contorno",
+                title: "Stroke Width",
                 min: 0,
                 max: 8,
                 step: 1,
@@ -1258,16 +1362,16 @@ addPropertyControls(CMSGallerySlideshow, {
 
     dots: {
         type: ControlType.Object,
-        title: "Indicadores",
+        title: "Dots",
         controls: {
             show: {
                 type: ControlType.Boolean,
-                title: "Mostrar",
+                title: "Show",
                 defaultValue: defaultDots.show,
             },
             position: {
                 type: ControlType.Enum,
-                title: "Posição",
+                title: "Position",
                 options: NAV_POSITION_OPTIONS,
                 optionTitles: NAV_POSITION_TITLES,
                 defaultValue: defaultDots.position,
@@ -1275,7 +1379,7 @@ addPropertyControls(CMSGallerySlideshow, {
             },
             inset: {
                 type: ControlType.Number,
-                title: "Distância da borda",
+                title: "Inset",
                 min: 0,
                 max: 60,
                 step: 1,
@@ -1285,7 +1389,7 @@ addPropertyControls(CMSGallerySlideshow, {
             },
             size: {
                 type: ControlType.Number,
-                title: "Tamanho",
+                title: "Size",
                 min: 4,
                 max: 32,
                 step: 1,
@@ -1295,7 +1399,7 @@ addPropertyControls(CMSGallerySlideshow, {
             },
             gap: {
                 type: ControlType.Number,
-                title: "Espaço entre",
+                title: "Gap",
                 min: 0,
                 max: 40,
                 step: 1,
@@ -1305,7 +1409,7 @@ addPropertyControls(CMSGallerySlideshow, {
             },
             padding: {
                 type: ControlType.Number,
-                title: "Preenchimento do fundo",
+                title: "Background Padding",
                 min: 0,
                 max: 32,
                 step: 1,
@@ -1315,13 +1419,13 @@ addPropertyControls(CMSGallerySlideshow, {
             },
             backgroundColor: {
                 type: ControlType.Color,
-                title: "Fundo (pílula)",
+                title: "Background (Pill)",
                 defaultValue: defaultDots.backgroundColor,
                 hidden: (d: DotsSettings) => !d.show,
             },
             blur: {
                 type: ControlType.Number,
-                title: "Blur do fundo",
+                title: "Background Blur",
                 min: 0,
                 max: 40,
                 step: 1,
@@ -1331,13 +1435,13 @@ addPropertyControls(CMSGallerySlideshow, {
             },
             strokeColor: {
                 type: ControlType.Color,
-                title: "Contorno",
+                title: "Stroke",
                 defaultValue: defaultDots.strokeColor,
                 hidden: (d: DotsSettings) => !d.show,
             },
             strokeWidth: {
                 type: ControlType.Number,
-                title: "Espessura do contorno",
+                title: "Stroke Width",
                 min: 0,
                 max: 8,
                 step: 1,
@@ -1347,13 +1451,13 @@ addPropertyControls(CMSGallerySlideshow, {
             },
             activeColor: {
                 type: ControlType.Color,
-                title: "Ativo",
+                title: "Active",
                 defaultValue: defaultDots.activeColor,
                 hidden: (d: DotsSettings) => !d.show,
             },
             inactiveColor: {
                 type: ControlType.Color,
-                title: "Inativo",
+                title: "Inactive",
                 defaultValue: defaultDots.inactiveColor,
                 hidden: (d: DotsSettings) => !d.show,
             },
@@ -1362,16 +1466,16 @@ addPropertyControls(CMSGallerySlideshow, {
 
     counter: {
         type: ControlType.Object,
-        title: "Contador",
+        title: "Counter",
         controls: {
             show: {
                 type: ControlType.Boolean,
-                title: "Mostrar",
+                title: "Show",
                 defaultValue: defaultCounter.show,
             },
             position: {
                 type: ControlType.Enum,
-                title: "Posição",
+                title: "Position",
                 options: NAV_POSITION_OPTIONS,
                 optionTitles: NAV_POSITION_TITLES,
                 defaultValue: defaultCounter.position,
@@ -1379,7 +1483,7 @@ addPropertyControls(CMSGallerySlideshow, {
             },
             inset: {
                 type: ControlType.Number,
-                title: "Distância da borda",
+                title: "Inset",
                 min: 0,
                 max: 60,
                 step: 1,
@@ -1389,19 +1493,19 @@ addPropertyControls(CMSGallerySlideshow, {
             },
             textColor: {
                 type: ControlType.Color,
-                title: "Texto",
+                title: "Text",
                 defaultValue: defaultCounter.textColor,
                 hidden: (c: CounterSettings) => !c.show,
             },
             background: {
                 type: ControlType.Color,
-                title: "Fundo",
+                title: "Background",
                 defaultValue: defaultCounter.background,
                 hidden: (c: CounterSettings) => !c.show,
             },
             fontSize: {
                 type: ControlType.Number,
-                title: "Tamanho do texto",
+                title: "Text Size",
                 min: 8,
                 max: 32,
                 step: 1,
