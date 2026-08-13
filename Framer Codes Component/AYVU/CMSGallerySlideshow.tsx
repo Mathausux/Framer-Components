@@ -449,19 +449,7 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
     const goNext = () => goTo(index + 1, 1)
     const goPrev = () => goTo(index - 1, -1)
 
-    // While dragging, the neighboring slide (next or previous) already sits
-    // against the edge being revealed, following the finger in real time,
-    // instead of showing the container background behind the current slide.
-    const [peekDirection, setPeekDirection] = useState<0 | 1 | -1>(0)
-    const [dragOffsetPx, setDragOffsetPx] = useState(0)
-
     const currentSlide = slides[index]
-    const nextSlide = transition.loop
-        ? slides[(index + 1) % Math.max(total, 1)]
-        : slides[index + 1]
-    const prevSlide = transition.loop
-        ? slides[(index - 1 + Math.max(total, 1)) % Math.max(total, 1)]
-        : slides[index - 1]
     const currentIsVideo = currentSlide?.type === "video"
     // If the current slide is a video and "Wait for Video" is on, advancing
     // does not use the interval — it happens via the <video>'s onEnded
@@ -497,16 +485,6 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
         transition.loop,
     ])
 
-    const handleDrag = (
-        _event: MouseEvent | TouchEvent | PointerEvent,
-        info: PanInfo
-    ) => {
-        setDragOffsetPx(info.offset.x)
-        if (info.offset.x < -4) setPeekDirection(1)
-        else if (info.offset.x > 4) setPeekDirection(-1)
-        else setPeekDirection(0)
-    }
-
     const handleDragEnd = (
         _event: MouseEvent | TouchEvent | PointerEvent,
         info: PanInfo
@@ -517,46 +495,6 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
         } else if (info.offset.x > swipeThreshold) {
             goPrev()
         }
-        setPeekDirection(0)
-        setDragOffsetPx(0)
-    }
-
-    const renderSlideMedia = (slide: GallerySlide | undefined) => {
-        if (!slide) return null
-        if (slide.type === "video") {
-            return (
-                <video
-                    src={slide.src}
-                    poster={slide.poster}
-                    aria-label={slide.alt ?? ""}
-                    muted
-                    loop
-                    playsInline
-                    style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit,
-                        display: "block",
-                        pointerEvents: "none",
-                    }}
-                />
-            )
-        }
-        return (
-            <img
-                src={slide.src}
-                alt={slide.alt ?? ""}
-                style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit,
-                    display: "block",
-                    pointerEvents: "none",
-                    userSelect: "none",
-                }}
-                draggable={false}
-            />
-        )
     }
 
     const variants = {
@@ -799,21 +737,6 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
                     </div>
                 ) : (
                     <>
-                        {peekDirection !== 0 && (
-                            <div
-                                style={{
-                                    ...slideStyle,
-                                    transform: `translateX(calc(${
-                                        peekDirection === 1 ? "100%" : "-100%"
-                                    } + ${dragOffsetPx}px))`,
-                                }}
-                            >
-                                {renderSlideMedia(
-                                    peekDirection === 1 ? nextSlide : prevSlide
-                                )}
-                            </div>
-                        )}
-
                         <AnimatePresence
                             initial={false}
                             custom={direction}
@@ -832,9 +755,19 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
                                 }}
                                 drag={dragEnabled ? "x" : false}
                                 dragConstraints={{ left: 0, right: 0 }}
-                                dragElastic={1}
+                                // 0 = the slide never visually moves away
+                                // from its resting position. Framer Motion
+                                // still reports the real pointer
+                                // offset/velocity in onDragEnd regardless
+                                // of this value, so the swipe is still
+                                // detected correctly — this only stops the
+                                // gesture from dragging the slide (and
+                                // exposing the background behind it)
+                                // visually. The actual transition between
+                                // slides is handled by the variants above.
+                                dragElastic={0}
+                                dragMomentum={false}
                                 style={slideStyle}
-                                onDrag={handleDrag}
                                 onDragEnd={handleDragEnd}
                             >
                                 {currentSlide?.type === "video" ? (

@@ -33,6 +33,7 @@ Historico de sincronizacao entre Codex, Claude e outros agentes.
 | Claude | Remover transicoes animadas (fade/slide/zoom) entre slides: troca agora e instantanea (corte direto), sem AnimatePresence; drag/peek em tempo real mantido | `Framer Codes Component/AYVU/CMSGallerySlideshow.tsx`, `Sync/log.md` | concluido |
 
 | Claude | Reintroduzir transicoes usando grupo "Transition" igual ao componente de referencia (style/duration/easing/autoplay/autoplayInterval/pauseOnHover/loop/enableDrag) e traduzir todas as props e textos do componente para ingles | `Framer Codes Component/AYVU/CMSGallerySlideshow.tsx`, `Sync/log.md` | concluido |
+| Claude | Remover feedback visual do drag (peek do slide vizinho), mantendo apenas a deteccao funcional do gesto via dragElastic=0, no mesmo padrao do componente de referencia | `Framer Codes Component/AYVU/CMSGallerySlideshow.tsx`, `Sync/log.md` | concluido |
 
 ## Decisoes
 
