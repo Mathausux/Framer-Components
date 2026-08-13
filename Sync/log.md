@@ -25,6 +25,7 @@ Historico de sincronizacao entre Codex, Claude e outros agentes.
 | Claude | Corrigir abordagem do seletor de Canvas com base em componente de referencia (CMSSlideshow): ControlType.ComponentInstance entrega React.ReactNode para renderizar, nao um ref externo; prop renomeada para collectionSource e renderizada internamente (invisivel) para leitura via DOM | `Framer Codes Component/AYVU/CMSGallerySlideshow.tsx`, `Sync/log.md` | concluido |
 | Claude | Adicionar paridade Canvas/Preview: RenderTarget.canvas + prop "Slide (Canvas)" para escolher manualmente o slide exibido no editor enquanto dados reais do CMS carregam | `Framer Codes Component/AYVU/CMSGallerySlideshow.tsx`, `Sync/log.md` | concluido |
 | Claude | Expandir setas, indicadores e contador para grupos de props configuraveis (posicao, tamanho, cores, blur, contorno, layout separado/agrupado), no padrao do componente de referencia | `Framer Codes Component/AYVU/CMSGallerySlideshow.tsx`, `Sync/log.md` | concluido |
+| Claude | Adicionar suporte a video (CMS e manual): extracao de <video> do elemento conectado no Canvas, prop "Itens" manual com tipo imagem/video por item, e opcao "Aguardar video" para avancar so quando o video termina | `Framer Codes Component/AYVU/CMSGallerySlideshow.tsx`, `Sync/log.md` | concluido |
 
 ## Decisoes
 

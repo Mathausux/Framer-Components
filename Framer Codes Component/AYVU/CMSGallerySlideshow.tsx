@@ -9,16 +9,17 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
  * 1. Canvas (recomendado): conecte, no seletor "Elemento CMS", um Collection
  *    List/Grid já vinculado à sua Collection (com um campo Gallery). O
  *    elemento conectado é renderizado internamente (invisível) e o
- *    componente lê as imagens que ele produz, acompanhando atualizações via
- *    MutationObserver. Framer não permite que componentes de código leiam
- *    dados do CMS diretamente — por isso a leitura acontece no DOM já
- *    renderizado, não em uma API de dados.
- * 2. Manual: arraste este componente para dentro de um Collection List e
- *    vincule o campo Gallery diretamente na prop "Galeria".
+ *    componente lê as imagens e vídeos que ele produz, acompanhando
+ *    atualizações via MutationObserver. Framer não permite que componentes
+ *    de código leiam dados do CMS diretamente — por isso a leitura acontece
+ *    no DOM já renderizado, não em uma API de dados.
+ * 2. Manual: adicione itens diretamente na prop "Itens" — cada item pode
+ *    ser uma imagem ou um vídeo.
  *
- * Setas, indicadores (dots) e contador são totalmente configuráveis:
- * posição, tamanho, cores, blur, contorno e (para setas) layout
- * separado/agrupado.
+ * Slides podem ser imagem ou vídeo (com opção de aguardar o vídeo terminar
+ * antes de avançar). Setas, indicadores (dots) e contador são totalmente
+ * configuráveis: posição, tamanho, cores, blur, contorno e (para setas)
+ * layout separado/agrupado.
  *
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
@@ -41,8 +42,18 @@ type NavPosition =
 
 type ArrowsPosition = "top" | "center" | "bottom" | "outside"
 
-interface GalleryImage {
+interface GallerySlide {
+    type: "image" | "video"
     src: string
+    alt?: string
+    poster?: string
+}
+
+interface ManualItem {
+    mediaType: "image" | "video"
+    image?: { src: string }
+    video?: string
+    poster?: { src: string }
     alt?: string
 }
 
@@ -91,11 +102,12 @@ interface CMSGallerySlideshowProps {
     dataSource: "canvas" | "manual"
     collectionSource?: React.ReactNode
     previewIndex: number
-    images: GalleryImage[]
+    items: ManualItem[]
     autoplay: boolean
     interval: number
     pauseOnHover: boolean
     loop: boolean
+    waitForVideo: boolean
     transitionStyle: "fade" | "slide" | "zoom"
     objectFit: "cover" | "contain" | "fill"
     borderRadius: number
@@ -239,11 +251,12 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
         dataSource = "canvas",
         collectionSource,
         previewIndex = 0,
-        images: manualImages = [],
+        items: manualItems = [],
         autoplay = true,
         interval = 4,
         pauseOnHover = true,
         loop = true,
+        waitForVideo = true,
         transitionStyle = "fade",
         objectFit = "cover",
         borderRadius = 0,
@@ -257,33 +270,53 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
     const [index, setIndex] = useState(0)
     const [direction, setDirection] = useState(1)
     const [isHovering, setIsHovering] = useState(false)
-    const [canvasImages, setCanvasImages] = useState<GalleryImage[]>([])
+    const [canvasSlides, setCanvasSlides] = useState<GallerySlide[]>([])
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
     const collectionWrapperRef = useRef<HTMLDivElement>(null)
+    const videoRef = useRef<HTMLVideoElement>(null)
 
     // Modo "canvas": o elemento conectado via ControlType.ComponentInstance
     // (ex.: um Collection List já vinculado à Collection) é renderizado
     // dentro de collectionWrapperRef, invisível. Depois de montado, lemos as
-    // <img>/background-image produzidas por ele e observamos mutações para
-    // acompanhar trocas de dados do CMS.
+    // <img>/<video>/background-image produzidas por ele, na ordem em que
+    // aparecem no DOM, e observamos mutações para acompanhar trocas de
+    // dados do CMS.
     useLayoutEffect(() => {
         if (dataSource !== "canvas") {
-            setCanvasImages([])
+            setCanvasSlides([])
             return
         }
 
         const node = collectionWrapperRef.current
         if (!node) return
 
-        const extractImages = () => {
+        const extractSlides = () => {
             const seen = new Set<string>()
-            const found: GalleryImage[] = []
+            const found: GallerySlide[] = []
 
-            node.querySelectorAll("img").forEach((img) => {
-                const src = img.currentSrc || img.src
-                if (!src || seen.has(src)) return
-                seen.add(src)
-                found.push({ src, alt: img.alt })
+            node.querySelectorAll("img, video").forEach((el) => {
+                if (el.tagName === "VIDEO") {
+                    const video = el as HTMLVideoElement
+                    const src =
+                        video.currentSrc ||
+                        video.src ||
+                        video.querySelector("source")?.src ||
+                        ""
+                    if (!src || seen.has(src)) return
+                    seen.add(src)
+                    found.push({
+                        type: "video",
+                        src,
+                        alt: video.getAttribute("aria-label") ?? "",
+                        poster: video.poster || undefined,
+                    })
+                } else {
+                    const img = el as HTMLImageElement
+                    const src = img.currentSrc || img.src
+                    if (!src || seen.has(src)) return
+                    seen.add(src)
+                    found.push({ type: "image", src, alt: img.alt })
+                }
             })
 
             node.querySelectorAll<HTMLElement>(
@@ -295,27 +328,47 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
                 const src = match?.[1]
                 if (!src || seen.has(src)) return
                 seen.add(src)
-                found.push({ src, alt: el.getAttribute("aria-label") ?? "" })
+                found.push({
+                    type: "image",
+                    src,
+                    alt: el.getAttribute("aria-label") ?? "",
+                })
             })
 
-            setCanvasImages(found)
+            setCanvasSlides(found)
         }
 
-        extractImages()
+        extractSlides()
 
-        const observer = new MutationObserver(extractImages)
+        const observer = new MutationObserver(extractSlides)
         observer.observe(node, {
             childList: true,
             subtree: true,
             attributes: true,
-            attributeFilter: ["src", "srcset", "style"],
+            attributeFilter: ["src", "srcset", "style", "poster"],
         })
 
         return () => observer.disconnect()
     }, [dataSource, collectionSource])
 
-    const images = dataSource === "canvas" ? canvasImages : manualImages
-    const total = images.length
+    const manualSlides: GallerySlide[] = manualItems
+        .map((item): GallerySlide | null => {
+            if (item.mediaType === "video") {
+                if (!item.video) return null
+                return {
+                    type: "video",
+                    src: item.video,
+                    alt: item.alt,
+                    poster: item.poster?.src,
+                }
+            }
+            if (!item.image?.src) return null
+            return { type: "image", src: item.image.src, alt: item.alt }
+        })
+        .filter((slide): slide is GallerySlide => slide !== null)
+
+    const slides = dataSource === "canvas" ? canvasSlides : manualSlides
+    const total = slides.length
     const hasMultiple = total > 1
     const maxIndex = Math.max(0, total - 1)
 
@@ -342,8 +395,14 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
     const goNext = () => goTo(index + 1, 1)
     const goPrev = () => goTo(index - 1, -1)
 
+    const currentSlide = slides[index]
+    const currentIsVideo = currentSlide?.type === "video"
+    // Se o slide atual é um vídeo e "Aguardar vídeo" está ativo, o avanço
+    // não usa o intervalo — ele acontece pelo evento onEnded do <video>.
+    const autoAdvanceByTimer = autoplay && !(currentIsVideo && waitForVideo)
+
     useLayoutEffect(() => {
-        if (!autoplay || !hasMultiple) return
+        if (!autoAdvanceByTimer || !hasMultiple) return
         if (pauseOnHover && isHovering) return
 
         timerRef.current = setInterval(() => {
@@ -360,7 +419,15 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
         return () => {
             if (timerRef.current) clearInterval(timerRef.current)
         }
-    }, [autoplay, interval, pauseOnHover, isHovering, hasMultiple, total, loop])
+    }, [
+        autoAdvanceByTimer,
+        interval,
+        pauseOnHover,
+        isHovering,
+        hasMultiple,
+        total,
+        loop,
+    ])
 
     const handleDragEnd = (
         _event: MouseEvent | TouchEvent | PointerEvent,
@@ -393,7 +460,6 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
     } as const
 
     const activeVariant = variants[transitionStyle] ?? variants.fade
-    const currentImage = images[index]
 
     const isGroupedArrows = arrows.layout === "grouped"
     const arrowsEffectivePosition = isGroupedArrows
@@ -545,7 +611,7 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
                     dots.blur > 0 ? `blur(${dots.blur}px)` : undefined,
             }}
         >
-            {images.map((_, dotIndex) => {
+            {slides.map((_, dotIndex) => {
                 const isActive = dotIndex === index
                 return (
                     <motion.button
@@ -605,9 +671,9 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
                     <div style={emptyStateStyle}>
                         {dataSource === "canvas"
                             ? collectionSource
-                                ? "Nenhuma imagem encontrada dentro do elemento conectado. Confirme que ele está vinculado a uma Collection com campo Gallery."
+                                ? "Nenhuma imagem ou vídeo encontrado dentro do elemento conectado. Confirme que ele está vinculado a uma Collection com campo Gallery."
                                 : "Conecte, no painel de propriedades, um Collection List já vinculado à sua Collection do CMS através do seletor \"Elemento CMS\"."
-                            : "Conecte este componente a uma Collection e selecione o campo de Galeria no painel de propriedades."}
+                            : "Adicione itens (imagem ou vídeo) na prop \"Itens\" no painel de propriedades."}
                     </div>
                 ) : (
                     <>
@@ -626,19 +692,42 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
                                 onDragEnd={handleDragEnd}
                                 style={slideStyle}
                             >
-                                <img
-                                    src={currentImage?.src}
-                                    alt={currentImage?.alt ?? ""}
-                                    style={{
-                                        width: "100%",
-                                        height: "100%",
-                                        objectFit,
-                                        display: "block",
-                                        pointerEvents: "none",
-                                        userSelect: "none",
-                                    }}
-                                    draggable={false}
-                                />
+                                {currentSlide?.type === "video" ? (
+                                    <video
+                                        ref={videoRef}
+                                        src={currentSlide.src}
+                                        poster={currentSlide.poster}
+                                        aria-label={currentSlide.alt ?? ""}
+                                        autoPlay
+                                        muted
+                                        loop={!waitForVideo}
+                                        playsInline
+                                        onEnded={() => {
+                                            if (waitForVideo) goNext()
+                                        }}
+                                        style={{
+                                            width: "100%",
+                                            height: "100%",
+                                            objectFit,
+                                            display: "block",
+                                            pointerEvents: "none",
+                                        }}
+                                    />
+                                ) : (
+                                    <img
+                                        src={currentSlide?.src}
+                                        alt={currentSlide?.alt ?? ""}
+                                        style={{
+                                            width: "100%",
+                                            height: "100%",
+                                            objectFit,
+                                            display: "block",
+                                            pointerEvents: "none",
+                                            userSelect: "none",
+                                        }}
+                                        draggable={false}
+                                    />
+                                )}
                             </motion.div>
                         </AnimatePresence>
 
@@ -842,15 +931,53 @@ addPropertyControls(CMSGallerySlideshow, {
             "Apenas no Canvas: escolha manualmente qual imagem visualizar enquanto edita, já que os dados reais do CMS podem levar um instante a mais para aparecer no editor do que no Preview.",
         hidden: (props) => props.dataSource !== "canvas",
     },
-    images: {
+    items: {
         type: ControlType.Array,
-        title: "Galeria",
+        title: "Itens",
         description:
-            "Vincule ao campo do tipo Gallery da sua Collection do CMS através do seletor de campos do Collection List.",
+            "Cada item pode ser uma imagem ou um vídeo. Para vincular ao campo Gallery da sua Collection, prefira o modo \"Selecionar no Canvas\".",
         control: {
-            type: ControlType.ResponsiveImage,
+            type: ControlType.Object,
+            controls: {
+                mediaType: {
+                    type: ControlType.Enum,
+                    title: "Tipo",
+                    options: ["image", "video"],
+                    optionTitles: ["Imagem", "Vídeo"],
+                    defaultValue: "image",
+                    displaySegmentedControl: true,
+                },
+                image: {
+                    type: ControlType.ResponsiveImage,
+                    title: "Imagem",
+                    hidden: (item: ManualItem) => item.mediaType !== "image",
+                },
+                video: {
+                    type: ControlType.File,
+                    title: "Vídeo",
+                    allowedFileTypes: ["mp4", "webm", "mov", "ogg"],
+                    hidden: (item: ManualItem) => item.mediaType !== "video",
+                },
+                poster: {
+                    type: ControlType.ResponsiveImage,
+                    title: "Capa (opcional)",
+                    hidden: (item: ManualItem) => item.mediaType !== "video",
+                },
+                alt: {
+                    type: ControlType.String,
+                    title: "Texto alternativo",
+                    defaultValue: "",
+                },
+            },
         },
         hidden: (props) => props.dataSource !== "manual",
+    },
+    waitForVideo: {
+        type: ControlType.Boolean,
+        title: "Aguardar vídeo",
+        defaultValue: true,
+        description:
+            "Quando um slide é vídeo, aguarda ele terminar antes de avançar automaticamente, em vez de usar o intervalo fixo.",
     },
     transitionStyle: {
         type: ControlType.Enum,
