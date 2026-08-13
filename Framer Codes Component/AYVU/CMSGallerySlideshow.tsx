@@ -103,6 +103,8 @@ interface CMSGallerySlideshowProps {
     collectionSource?: React.ReactNode
     previewIndex: number
     items: ManualItem[]
+    cmsVideoFile?: string
+    cmsVideoVisible: boolean
     autoplay: boolean
     interval: number
     pauseOnHover: boolean
@@ -252,6 +254,8 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
         collectionSource,
         previewIndex = 0,
         items: manualItems = [],
+        cmsVideoFile,
+        cmsVideoVisible = true,
         autoplay = true,
         interval = 4,
         pauseOnHover = true,
@@ -388,7 +392,17 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
         })
         .filter((slide): slide is GallerySlide => slide !== null)
 
-    const slides = dataSource === "canvas" ? canvasSlides : manualSlides
+    // Vídeo vinculado diretamente a uma variável do CMS (campo File), útil
+    // quando este componente é colocado como o próprio item repetido dentro
+    // de um Collection List. "Visível" permite ligar a um campo Boolean do
+    // CMS para esconder o vídeo em registros que não o possuem.
+    const cmsVideoSlides: GallerySlide[] =
+        cmsVideoVisible && cmsVideoFile
+            ? [{ type: "video", src: cmsVideoFile }]
+            : []
+
+    const baseSlides = dataSource === "canvas" ? canvasSlides : manualSlides
+    const slides = [...baseSlides, ...cmsVideoSlides]
     const total = slides.length
     const hasMultiple = total > 1
     const maxIndex = Math.max(0, total - 1)
@@ -1078,6 +1092,21 @@ addPropertyControls(CMSGallerySlideshow, {
         defaultValue: true,
         description:
             "Quando um slide é vídeo, aguarda ele terminar antes de avançar automaticamente, em vez de usar o intervalo fixo.",
+    },
+    cmsVideoFile: {
+        type: ControlType.File,
+        title: "Vídeo (CMS)",
+        allowedFileTypes: ["mp4", "webm", "mov", "m4v", "ogg"],
+        description:
+            "Vincule diretamente a um campo File da sua Collection do CMS usando o ícone de variável — útil quando este componente é usado como o próprio item repetido dentro de um Collection List. Independe do modo \"Origem\" acima.",
+    },
+    cmsVideoVisible: {
+        type: ControlType.Boolean,
+        title: "Vídeo visível",
+        defaultValue: true,
+        description:
+            "Pode ser vinculado a um campo Boolean do CMS para esconder o vídeo em registros que não possuem um.",
+        hidden: (props) => !props.cmsVideoFile,
     },
     transitionStyle: {
         type: ControlType.Enum,
