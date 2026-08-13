@@ -105,6 +105,7 @@ interface CMSGallerySlideshowProps {
     items: ManualItem[]
     cmsVideoFile?: string
     cmsVideoVisible: boolean
+    cmsVideoPosition: "first" | "last"
     autoplay: boolean
     interval: number
     pauseOnHover: boolean
@@ -256,6 +257,7 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
         items: manualItems = [],
         cmsVideoFile,
         cmsVideoVisible = true,
+        cmsVideoPosition = "last",
         autoplay = true,
         interval = 4,
         pauseOnHover = true,
@@ -402,7 +404,10 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
             : []
 
     const baseSlides = dataSource === "canvas" ? canvasSlides : manualSlides
-    const slides = [...baseSlides, ...cmsVideoSlides]
+    const slides =
+        cmsVideoPosition === "first"
+            ? [...cmsVideoSlides, ...baseSlides]
+            : [...baseSlides, ...cmsVideoSlides]
     const total = slides.length
     const hasMultiple = total > 1
     const maxIndex = Math.max(0, total - 1)
@@ -1106,6 +1111,14 @@ addPropertyControls(CMSGallerySlideshow, {
         defaultValue: true,
         description:
             "Pode ser vinculado a um campo Boolean do CMS para esconder o vídeo em registros que não possuem um.",
+        hidden: (props) => !props.cmsVideoFile,
+    },
+    cmsVideoPosition: {
+        type: ControlType.Enum,
+        title: "Posição do vídeo",
+        options: ["first", "last"],
+        optionTitles: ["Primeiro", "Último"],
+        defaultValue: "last",
         hidden: (props) => !props.cmsVideoFile,
     },
     transitionStyle: {
