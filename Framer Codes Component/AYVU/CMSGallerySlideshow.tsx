@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from "react"
 import { AnimatePresence, motion, type PanInfo } from "framer-motion"
-import { addPropertyControls, ControlType } from "framer"
+import { addPropertyControls, ControlType, RenderTarget } from "framer"
 
 /**
  * CMS Gallery Slideshow
@@ -25,6 +25,7 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
     const {
         dataSource = "canvas",
         collectionSource,
+        previewIndex = 0,
         images: manualImages = [],
         autoplay = true,
         interval = 4,
@@ -40,6 +41,8 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
         dotColor = "rgba(255,255,255,0.5)",
         dotActiveColor = "#FFFFFF",
     } = props
+
+    const isOnCanvas = RenderTarget.current() === RenderTarget.canvas
 
     const [index, setIndex] = useState(0)
     const [direction, setDirection] = useState(1)
@@ -104,6 +107,17 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
     const images = dataSource === "canvas" ? canvasImages : manualImages
     const total = images.length
     const hasMultiple = total > 1
+    const maxIndex = Math.max(0, total - 1)
+
+    // No Canvas do editor, o Collection List conectado pode demorar mais
+    // para popular seus dados reais do CMS (ou usar dados de exemplo) do que
+    // no Preview/site publicado. Enquanto isso, deixe escolher manualmente
+    // qual slide visualizar através da prop "Slide de Pré-visualização".
+    useLayoutEffect(() => {
+        if (!isOnCanvas || total === 0) return
+        const clamped = Math.max(0, Math.min(maxIndex, previewIndex ?? 0))
+        setIndex(clamped)
+    }, [isOnCanvas, previewIndex, maxIndex, total])
 
     const goTo = (nextIndex: number, dir: number) => {
         if (total === 0) return
@@ -281,6 +295,7 @@ interface GalleryImage {
 interface CMSGallerySlideshowProps {
     dataSource: "canvas" | "manual"
     collectionSource?: React.ReactNode
+    previewIndex: number
     images: GalleryImage[]
     autoplay: boolean
     interval: number
@@ -401,6 +416,16 @@ addPropertyControls(CMSGallerySlideshow, {
         title: "Elemento CMS",
         description:
             "Conecte um Collection List/Grid já vinculado à sua Collection do CMS (com um campo Gallery). Ele é renderizado internamente (invisível) e as imagens que produz alimentam o slideshow.",
+        hidden: (props) => props.dataSource !== "canvas",
+    },
+    previewIndex: {
+        type: ControlType.Number,
+        title: "Slide (Canvas)",
+        min: 0,
+        step: 1,
+        defaultValue: 0,
+        description:
+            "Apenas no Canvas: escolha manualmente qual imagem visualizar enquanto edita, já que os dados reais do CMS podem levar um instante a mais para aparecer no editor do que no Preview.",
         hidden: (props) => props.dataSource !== "canvas",
     },
     images: {

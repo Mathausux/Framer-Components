@@ -23,6 +23,7 @@ Historico de sincronizacao entre Codex, Claude e outros agentes.
 | Claude | Adicionar seletor de elemento do Canvas (ControlType.ComponentInstance) como forma alternativa de conectar ao CMS exposto no canvas | `Framer Codes Component/AYVU/CMSGallerySlideshow.tsx`, `Sync/log.md` | concluido |
 | Claude | Corrigir leitura do elemento do Canvas: ref.current podia nao estar pronto no primeiro efeito e nunca reativar; adicionado polling ate anexar o observer | `Framer Codes Component/AYVU/CMSGallerySlideshow.tsx`, `Sync/log.md` | concluido |
 | Claude | Corrigir abordagem do seletor de Canvas com base em componente de referencia (CMSSlideshow): ControlType.ComponentInstance entrega React.ReactNode para renderizar, nao um ref externo; prop renomeada para collectionSource e renderizada internamente (invisivel) para leitura via DOM | `Framer Codes Component/AYVU/CMSGallerySlideshow.tsx`, `Sync/log.md` | concluido |
+| Claude | Adicionar paridade Canvas/Preview: RenderTarget.canvas + prop "Slide (Canvas)" para escolher manualmente o slide exibido no editor enquanto dados reais do CMS carregam | `Framer Codes Component/AYVU/CMSGallerySlideshow.tsx`, `Sync/log.md` | concluido |
 
 ## Decisoes
 
