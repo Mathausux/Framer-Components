@@ -16,11 +16,224 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
  * 2. Manual: arraste este componente para dentro de um Collection List e
  *    vincule o campo Gallery diretamente na prop "Galeria".
  *
+ * Setas, indicadores (dots) e contador são totalmente configuráveis:
+ * posição, tamanho, cores, blur, contorno e (para setas) layout
+ * separado/agrupado.
+ *
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  * @framerIntrinsicWidth 400
  * @framerIntrinsicHeight 300
  */
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+type NavPosition =
+    | "top-left"
+    | "top-center"
+    | "top-right"
+    | "bottom-left"
+    | "bottom-center"
+    | "bottom-right"
+    | "outside"
+
+type ArrowsPosition = "top" | "center" | "bottom" | "outside"
+
+interface GalleryImage {
+    src: string
+    alt?: string
+}
+
+interface ArrowsSettings {
+    show: boolean
+    layout: "split" | "grouped"
+    position: ArrowsPosition
+    groupedPosition: NavPosition
+    groupedGap: number
+    inset: number
+    size: number
+    iconSize: number
+    color: string
+    background: string
+    radius: number
+    blur: number
+    strokeColor: string
+    strokeWidth: number
+}
+
+interface DotsSettings {
+    show: boolean
+    position: NavPosition
+    inset: number
+    size: number
+    gap: number
+    padding: number
+    backgroundColor: string
+    activeColor: string
+    inactiveColor: string
+    blur: number
+    strokeColor: string
+    strokeWidth: number
+}
+
+interface CounterSettings {
+    show: boolean
+    position: NavPosition
+    inset: number
+    textColor: string
+    background: string
+    fontSize: number
+}
+
+interface CMSGallerySlideshowProps {
+    dataSource: "canvas" | "manual"
+    collectionSource?: React.ReactNode
+    previewIndex: number
+    images: GalleryImage[]
+    autoplay: boolean
+    interval: number
+    pauseOnHover: boolean
+    loop: boolean
+    transitionStyle: "fade" | "slide" | "zoom"
+    objectFit: "cover" | "contain" | "fill"
+    borderRadius: number
+    arrows: ArrowsSettings
+    dots: DotsSettings
+    counter: CounterSettings
+}
+
+// ---------------------------------------------------------------------------
+// Defaults
+// ---------------------------------------------------------------------------
+
+const defaultArrows: ArrowsSettings = {
+    show: true,
+    layout: "split",
+    position: "center",
+    groupedPosition: "bottom-right",
+    groupedGap: 8,
+    inset: 12,
+    size: 36,
+    iconSize: 14,
+    color: "#FFFFFF",
+    background: "rgba(0,0,0,0.35)",
+    radius: 999,
+    blur: 0,
+    strokeColor: "rgba(255,255,255,0.2)",
+    strokeWidth: 0,
+}
+
+const defaultDots: DotsSettings = {
+    show: true,
+    position: "bottom-center",
+    inset: 12,
+    size: 8,
+    gap: 8,
+    padding: 6,
+    backgroundColor: "rgba(0,0,0,0)",
+    activeColor: "#FFFFFF",
+    inactiveColor: "rgba(255,255,255,0.5)",
+    blur: 0,
+    strokeColor: "rgba(255,255,255,0.15)",
+    strokeWidth: 0,
+}
+
+const defaultCounter: CounterSettings = {
+    show: false,
+    position: "top-right",
+    inset: 12,
+    textColor: "#FFFFFF",
+    background: "rgba(0,0,0,0.45)",
+    fontSize: 12,
+}
+
+// ---------------------------------------------------------------------------
+// Layout helpers
+// ---------------------------------------------------------------------------
+
+function getOverlayPosition(
+    position: NavPosition,
+    inset: number
+): React.CSSProperties {
+    switch (position) {
+        case "top-left":
+            return { top: inset, left: inset }
+        case "top-center":
+            return { top: inset, left: "50%", transform: "translateX(-50%)" }
+        case "top-right":
+            return { top: inset, right: inset }
+        case "bottom-left":
+            return { bottom: inset, left: inset }
+        case "bottom-right":
+            return { bottom: inset, right: inset }
+        case "bottom-center":
+        default:
+            return {
+                bottom: inset,
+                left: "50%",
+                transform: "translateX(-50%)",
+            }
+    }
+}
+
+function getArrowVerticalStyle(
+    position: ArrowsPosition,
+    inset: number,
+    size: number
+): React.CSSProperties {
+    switch (position) {
+        case "top":
+            return { top: inset }
+        case "bottom":
+            return { bottom: inset }
+        case "center":
+        default:
+            // Evita `transform: translateY(-50%)`: uma vez que o Framer
+            // Motion anima o elemento, ele passa a controlar `transform`
+            // por inteiro e descarta o que foi setado via style — usar
+            // marginTop centraliza sem depender de transform.
+            return { top: "50%", marginTop: -size / 2 }
+    }
+}
+
+function ChevronIcon({
+    direction,
+    size,
+    color,
+}: {
+    direction: "left" | "right"
+    size: number
+    color: string
+}) {
+    return (
+        <svg
+            width={size}
+            height={size}
+            viewBox="0 0 24 24"
+            fill="none"
+            style={{ display: "block", flexShrink: 0 }}
+        >
+            <path
+                d={
+                    direction === "left"
+                        ? "M15 5L8 12L15 19"
+                        : "M9 5L16 12L9 19"
+                }
+                stroke={color}
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </svg>
+    )
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
     const {
         dataSource = "canvas",
@@ -32,14 +245,11 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
         pauseOnHover = true,
         loop = true,
         transitionStyle = "fade",
-        showArrows = true,
-        showDots = true,
-        showCounter = false,
         objectFit = "cover",
         borderRadius = 0,
-        arrowColor = "#FFFFFF",
-        dotColor = "rgba(255,255,255,0.5)",
-        dotActiveColor = "#FFFFFF",
+        arrows = defaultArrows,
+        dots = defaultDots,
+        counter = defaultCounter,
     } = props
 
     const isOnCanvas = RenderTarget.current() === RenderTarget.canvas
@@ -112,7 +322,7 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
     // No Canvas do editor, o Collection List conectado pode demorar mais
     // para popular seus dados reais do CMS (ou usar dados de exemplo) do que
     // no Preview/site publicado. Enquanto isso, deixe escolher manualmente
-    // qual slide visualizar através da prop "Slide de Pré-visualização".
+    // qual slide visualizar através da prop "Slide (Canvas)".
     useLayoutEffect(() => {
         if (!isOnCanvas || total === 0) return
         const clamped = Math.max(0, Math.min(maxIndex, previewIndex ?? 0))
@@ -185,6 +395,199 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
     const activeVariant = variants[transitionStyle] ?? variants.fade
     const currentImage = images[index]
 
+    const isGroupedArrows = arrows.layout === "grouped"
+    const arrowsEffectivePosition = isGroupedArrows
+        ? arrows.groupedPosition
+        : arrows.position
+
+    const arrowsOverlay =
+        arrows.show && arrowsEffectivePosition !== "outside" && hasMultiple
+    const dotsOverlay = dots.show && dots.position !== "outside" && hasMultiple
+    const counterOverlay = counter.show && counter.position !== "outside"
+
+    const arrowsOutside =
+        arrows.show && arrowsEffectivePosition === "outside" && hasMultiple
+    const dotsOutside = dots.show && dots.position === "outside" && hasMultiple
+    const counterOutside = counter.show && counter.position === "outside"
+
+    const hasBottomBar = arrowsOutside || dotsOutside || counterOutside
+
+    const isPrevDisabled = !loop && index <= 0
+    const isNextDisabled = !loop && index >= maxIndex
+
+    const arrowButtonBaseStyle = (disabled: boolean): React.CSSProperties => ({
+        width: arrows.size,
+        height: arrows.size,
+        borderRadius: arrows.radius,
+        border: `${arrows.strokeWidth}px solid ${arrows.strokeColor}`,
+        boxSizing: "border-box",
+        background: arrows.background,
+        backdropFilter: arrows.blur > 0 ? `blur(${arrows.blur}px)` : undefined,
+        WebkitBackdropFilter:
+            arrows.blur > 0 ? `blur(${arrows.blur}px)` : undefined,
+        color: arrows.color,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        cursor: disabled ? "default" : "pointer",
+        opacity: disabled ? 0.35 : 1,
+        padding: 0,
+        flexShrink: 0,
+        pointerEvents: "auto",
+    })
+
+    const renderArrowButtonsSplit = (positioned: boolean) => (
+        <>
+            <motion.button
+                aria-label="Imagem anterior"
+                onClick={goPrev}
+                disabled={isPrevDisabled}
+                whileTap={isPrevDisabled ? undefined : { scale: 0.9 }}
+                style={{
+                    position: positioned ? "absolute" : "relative",
+                    left: positioned ? arrows.inset : undefined,
+                    ...(positioned
+                        ? getArrowVerticalStyle(
+                              arrows.position,
+                              arrows.inset,
+                              arrows.size
+                          )
+                        : {}),
+                    ...arrowButtonBaseStyle(isPrevDisabled),
+                    zIndex: 2,
+                }}
+            >
+                <ChevronIcon
+                    direction="left"
+                    size={arrows.iconSize}
+                    color={arrows.color}
+                />
+            </motion.button>
+            <motion.button
+                aria-label="Próxima imagem"
+                onClick={goNext}
+                disabled={isNextDisabled}
+                whileTap={isNextDisabled ? undefined : { scale: 0.9 }}
+                style={{
+                    position: positioned ? "absolute" : "relative",
+                    right: positioned ? arrows.inset : undefined,
+                    ...(positioned
+                        ? getArrowVerticalStyle(
+                              arrows.position,
+                              arrows.inset,
+                              arrows.size
+                          )
+                        : {}),
+                    ...arrowButtonBaseStyle(isNextDisabled),
+                    zIndex: 2,
+                }}
+            >
+                <ChevronIcon
+                    direction="right"
+                    size={arrows.iconSize}
+                    color={arrows.color}
+                />
+            </motion.button>
+        </>
+    )
+
+    const renderArrowButtonsGrouped = () => (
+        <div
+            style={{
+                display: "flex",
+                alignItems: "center",
+                gap: arrows.groupedGap,
+            }}
+        >
+            <motion.button
+                aria-label="Imagem anterior"
+                onClick={goPrev}
+                disabled={isPrevDisabled}
+                whileTap={isPrevDisabled ? undefined : { scale: 0.9 }}
+                style={arrowButtonBaseStyle(isPrevDisabled)}
+            >
+                <ChevronIcon
+                    direction="left"
+                    size={arrows.iconSize}
+                    color={arrows.color}
+                />
+            </motion.button>
+            <motion.button
+                aria-label="Próxima imagem"
+                onClick={goNext}
+                disabled={isNextDisabled}
+                whileTap={isNextDisabled ? undefined : { scale: 0.9 }}
+                style={arrowButtonBaseStyle(isNextDisabled)}
+            >
+                <ChevronIcon
+                    direction="right"
+                    size={arrows.iconSize}
+                    color={arrows.color}
+                />
+            </motion.button>
+        </div>
+    )
+
+    const renderDots = () => (
+        <div
+            style={{
+                display: "flex",
+                alignItems: "center",
+                gap: dots.gap,
+                padding: dots.padding,
+                borderRadius: 999,
+                background: dots.backgroundColor,
+                border: `${dots.strokeWidth}px solid ${dots.strokeColor}`,
+                boxSizing: "border-box",
+                backdropFilter:
+                    dots.blur > 0 ? `blur(${dots.blur}px)` : undefined,
+                WebkitBackdropFilter:
+                    dots.blur > 0 ? `blur(${dots.blur}px)` : undefined,
+            }}
+        >
+            {images.map((_, dotIndex) => {
+                const isActive = dotIndex === index
+                return (
+                    <motion.button
+                        key={dotIndex}
+                        aria-label={`Ir para a imagem ${dotIndex + 1}`}
+                        onClick={() => goTo(dotIndex, dotIndex > index ? 1 : -1)}
+                        whileTap={{ scale: 0.85 }}
+                        animate={{
+                            scale: isActive ? 1.15 : 1,
+                            backgroundColor: isActive
+                                ? dots.activeColor
+                                : dots.inactiveColor,
+                        }}
+                        style={{
+                            width: dots.size,
+                            height: dots.size,
+                            borderRadius: 999,
+                            border: "none",
+                            cursor: "pointer",
+                            padding: 0,
+                            flexShrink: 0,
+                        }}
+                    />
+                )
+            })}
+        </div>
+    )
+
+    const renderCounter = () => (
+        <div
+            style={{
+                padding: "4px 10px",
+                borderRadius: 999,
+                background: counter.background,
+                color: counter.textColor,
+                fontSize: counter.fontSize,
+            }}
+        >
+            {index + 1} / {total}
+        </div>
+    )
+
     return (
         <div
             style={{ ...containerStyle, borderRadius }}
@@ -197,120 +600,129 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
                 </div>
             )}
 
-            {total === 0 ? (
-                <div style={emptyStateStyle}>
-                    {dataSource === "canvas"
-                        ? collectionSource
-                            ? "Nenhuma imagem encontrada dentro do elemento conectado. Confirme que ele está vinculado a uma Collection com campo Gallery."
-                            : "Conecte, no painel de propriedades, um Collection List já vinculado à sua Collection do CMS através do seletor \"Elemento CMS\"."
-                        : "Conecte este componente a uma Collection e selecione o campo de Galeria no painel de propriedades."}
-                </div>
-            ) : (
-                <>
-                    <AnimatePresence initial={false} custom={direction} mode="popLayout">
-                        <motion.div
-                            key={index}
-                            custom={direction}
-                            variants={activeVariant}
-                            initial="initial"
-                            animate="animate"
-                            exit="exit"
-                            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                            drag={hasMultiple ? "x" : false}
-                            dragConstraints={{ left: 0, right: 0 }}
-                            dragElastic={0.6}
-                            onDragEnd={handleDragEnd}
-                            style={slideStyle}
-                        >
-                            <img
-                                src={currentImage?.src}
-                                alt={currentImage?.alt ?? ""}
-                                style={{
-                                    width: "100%",
-                                    height: "100%",
-                                    objectFit,
-                                    display: "block",
-                                    pointerEvents: "none",
-                                    userSelect: "none",
-                                }}
-                                draggable={false}
-                            />
-                        </motion.div>
-                    </AnimatePresence>
-
-                    {showArrows && hasMultiple && (
-                        <>
-                            <button
-                                aria-label="Imagem anterior"
-                                onClick={goPrev}
-                                style={{ ...arrowStyle, left: 12, color: arrowColor }}
+            <div style={frameStyle}>
+                {total === 0 ? (
+                    <div style={emptyStateStyle}>
+                        {dataSource === "canvas"
+                            ? collectionSource
+                                ? "Nenhuma imagem encontrada dentro do elemento conectado. Confirme que ele está vinculado a uma Collection com campo Gallery."
+                                : "Conecte, no painel de propriedades, um Collection List já vinculado à sua Collection do CMS através do seletor \"Elemento CMS\"."
+                            : "Conecte este componente a uma Collection e selecione o campo de Galeria no painel de propriedades."}
+                    </div>
+                ) : (
+                    <>
+                        <AnimatePresence initial={false} custom={direction} mode="popLayout">
+                            <motion.div
+                                key={index}
+                                custom={direction}
+                                variants={activeVariant}
+                                initial="initial"
+                                animate="animate"
+                                exit="exit"
+                                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                                drag={hasMultiple ? "x" : false}
+                                dragConstraints={{ left: 0, right: 0 }}
+                                dragElastic={0.6}
+                                onDragEnd={handleDragEnd}
+                                style={slideStyle}
                             >
-                                ‹
-                            </button>
-                            <button
-                                aria-label="Próxima imagem"
-                                onClick={goNext}
-                                style={{ ...arrowStyle, right: 12, color: arrowColor }}
-                            >
-                                ›
-                            </button>
-                        </>
-                    )}
-
-                    {showCounter && hasMultiple && (
-                        <div style={counterStyle}>
-                            {index + 1} / {total}
-                        </div>
-                    )}
-
-                    {showDots && hasMultiple && (
-                        <div style={dotsContainerStyle}>
-                            {images.map((_, dotIndex) => (
-                                <button
-                                    key={dotIndex}
-                                    aria-label={`Ir para a imagem ${dotIndex + 1}`}
-                                    onClick={() => goTo(dotIndex, dotIndex > index ? 1 : -1)}
+                                <img
+                                    src={currentImage?.src}
+                                    alt={currentImage?.alt ?? ""}
                                     style={{
-                                        ...dotStyle,
-                                        background:
-                                            dotIndex === index ? dotActiveColor : dotColor,
-                                        transform:
-                                            dotIndex === index ? "scale(1.2)" : "scale(1)",
+                                        width: "100%",
+                                        height: "100%",
+                                        objectFit,
+                                        display: "block",
+                                        pointerEvents: "none",
+                                        userSelect: "none",
                                     }}
+                                    draggable={false}
                                 />
+                            </motion.div>
+                        </AnimatePresence>
+
+                        {arrowsOverlay &&
+                            (isGroupedArrows ? (
+                                <div
+                                    style={{
+                                        position: "absolute",
+                                        zIndex: 2,
+                                        pointerEvents: "auto",
+                                        ...getOverlayPosition(
+                                            arrows.groupedPosition,
+                                            arrows.inset
+                                        ),
+                                    }}
+                                >
+                                    {renderArrowButtonsGrouped()}
+                                </div>
+                            ) : (
+                                renderArrowButtonsSplit(true)
                             ))}
+
+                        {dotsOverlay && (
+                            <div
+                                style={{
+                                    position: "absolute",
+                                    zIndex: 2,
+                                    pointerEvents: "auto",
+                                    ...getOverlayPosition(
+                                        dots.position,
+                                        dots.inset
+                                    ),
+                                }}
+                            >
+                                {renderDots()}
+                            </div>
+                        )}
+
+                        {counterOverlay && (
+                            <div
+                                style={{
+                                    position: "absolute",
+                                    zIndex: 2,
+                                    pointerEvents: "none",
+                                    ...getOverlayPosition(
+                                        counter.position,
+                                        counter.inset
+                                    ),
+                                }}
+                            >
+                                {renderCounter()}
+                            </div>
+                        )}
+                    </>
+                )}
+            </div>
+
+            {hasBottomBar && total > 0 && (
+                <div style={bottomBarStyle}>
+                    {arrowsOutside && (
+                        <div
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: isGroupedArrows ? arrows.groupedGap : 12,
+                            }}
+                        >
+                            {isGroupedArrows
+                                ? renderArrowButtonsGrouped()
+                                : renderArrowButtonsSplit(false)}
                         </div>
                     )}
-                </>
+                    {dotsOutside && renderDots()}
+                    {counterOutside && renderCounter()}
+                </div>
             )}
         </div>
     )
 }
 
-interface GalleryImage {
-    src: string
-    alt?: string
-}
-
-interface CMSGallerySlideshowProps {
-    dataSource: "canvas" | "manual"
-    collectionSource?: React.ReactNode
-    previewIndex: number
-    images: GalleryImage[]
-    autoplay: boolean
-    interval: number
-    pauseOnHover: boolean
-    loop: boolean
-    transitionStyle: "fade" | "slide" | "zoom"
-    showArrows: boolean
-    showDots: boolean
-    showCounter: boolean
-    objectFit: "cover" | "contain" | "fill"
-    borderRadius: number
-    arrowColor: string
-    dotColor: string
-    dotActiveColor: string
-}
+// ---------------------------------------------------------------------------
+// Styles
+// ---------------------------------------------------------------------------
 
 const containerStyle: React.CSSProperties = {
     position: "relative",
@@ -318,6 +730,16 @@ const containerStyle: React.CSSProperties = {
     height: "100%",
     overflow: "hidden",
     background: "#000000",
+    display: "flex",
+    flexDirection: "column",
+}
+
+const frameStyle: React.CSSProperties = {
+    position: "relative",
+    width: "100%",
+    flex: 1,
+    minHeight: 0,
+    overflow: "hidden",
 }
 
 // O Collection List conectado é renderizado aqui, fora da vista, apenas
@@ -332,9 +754,8 @@ const hiddenSourceStyle: React.CSSProperties = {
 }
 
 const emptyStateStyle: React.CSSProperties = {
-    position: "relative",
-    width: "100%",
-    height: "100%",
+    position: "absolute",
+    inset: 0,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -354,54 +775,47 @@ const slideStyle: React.CSSProperties = {
     cursor: "grab",
 }
 
-const arrowStyle: React.CSSProperties = {
-    position: "absolute",
-    top: "50%",
-    transform: "translateY(-50%)",
-    background: "rgba(0,0,0,0.35)",
-    border: "none",
-    borderRadius: "50%",
-    width: 36,
-    height: 36,
-    fontSize: 22,
-    lineHeight: "36px",
-    textAlign: "center",
-    cursor: "pointer",
-    zIndex: 2,
-    padding: 0,
-}
-
-const counterStyle: React.CSSProperties = {
-    position: "absolute",
-    top: 12,
-    right: 12,
-    padding: "4px 10px",
-    borderRadius: 999,
-    background: "rgba(0,0,0,0.45)",
-    color: "#FFFFFF",
-    fontSize: 12,
-    zIndex: 2,
-}
-
-const dotsContainerStyle: React.CSSProperties = {
-    position: "absolute",
-    bottom: 12,
-    left: "50%",
-    transform: "translateX(-50%)",
+const bottomBarStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "10px 12px 12px",
+    boxSizing: "border-box",
     display: "flex",
-    gap: 8,
-    zIndex: 2,
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 10,
+    background: "#000000",
 }
 
-const dotStyle: React.CSSProperties = {
-    width: 8,
-    height: 8,
-    borderRadius: "50%",
-    border: "none",
-    padding: 0,
-    cursor: "pointer",
-    transition: "transform 0.2s ease, background 0.2s ease",
-}
+// ---------------------------------------------------------------------------
+// Property Controls
+// ---------------------------------------------------------------------------
+
+const NAV_POSITION_OPTIONS: NavPosition[] = [
+    "top-left",
+    "top-center",
+    "top-right",
+    "bottom-left",
+    "bottom-center",
+    "bottom-right",
+    "outside",
+]
+const NAV_POSITION_TITLES = [
+    "Superior esquerda",
+    "Superior centro",
+    "Superior direita",
+    "Inferior esquerda",
+    "Inferior centro",
+    "Inferior direita",
+    "Fora (abaixo)",
+]
+
+const ARROW_POSITION_OPTIONS: ArrowsPosition[] = [
+    "top",
+    "center",
+    "bottom",
+    "outside",
+]
+const ARROW_POSITION_TITLES = ["Topo", "Centro", "Base", "Fora (abaixo)"]
 
 addPropertyControls(CMSGallerySlideshow, {
     dataSource: {
@@ -470,21 +884,6 @@ addPropertyControls(CMSGallerySlideshow, {
         title: "Loop",
         defaultValue: true,
     },
-    showArrows: {
-        type: ControlType.Boolean,
-        title: "Setas",
-        defaultValue: true,
-    },
-    showDots: {
-        type: ControlType.Boolean,
-        title: "Indicadores",
-        defaultValue: true,
-    },
-    showCounter: {
-        type: ControlType.Boolean,
-        title: "Contador",
-        defaultValue: false,
-    },
     objectFit: {
         type: ControlType.Enum,
         title: "Ajuste",
@@ -499,19 +898,287 @@ addPropertyControls(CMSGallerySlideshow, {
         max: 100,
         defaultValue: 0,
     },
-    arrowColor: {
-        type: ControlType.Color,
-        title: "Cor das setas",
-        defaultValue: "#FFFFFF",
+
+    arrows: {
+        type: ControlType.Object,
+        title: "Setas",
+        controls: {
+            show: {
+                type: ControlType.Boolean,
+                title: "Mostrar",
+                defaultValue: defaultArrows.show,
+            },
+            layout: {
+                type: ControlType.Enum,
+                title: "Layout",
+                options: ["split", "grouped"],
+                optionTitles: ["Separadas (bordas)", "Agrupadas"],
+                defaultValue: defaultArrows.layout,
+                displaySegmentedControl: true,
+                hidden: (a: ArrowsSettings) => !a.show,
+            },
+            position: {
+                type: ControlType.Enum,
+                title: "Posição",
+                options: ARROW_POSITION_OPTIONS,
+                optionTitles: ARROW_POSITION_TITLES,
+                defaultValue: defaultArrows.position,
+                hidden: (a: ArrowsSettings) => !a.show || a.layout !== "split",
+            },
+            groupedPosition: {
+                type: ControlType.Enum,
+                title: "Posição",
+                options: NAV_POSITION_OPTIONS,
+                optionTitles: NAV_POSITION_TITLES,
+                defaultValue: defaultArrows.groupedPosition,
+                hidden: (a: ArrowsSettings) =>
+                    !a.show || a.layout !== "grouped",
+            },
+            groupedGap: {
+                type: ControlType.Number,
+                title: "Espaço entre",
+                min: 0,
+                max: 32,
+                step: 1,
+                defaultValue: defaultArrows.groupedGap,
+                unit: "px",
+                hidden: (a: ArrowsSettings) =>
+                    !a.show || a.layout !== "grouped",
+            },
+            inset: {
+                type: ControlType.Number,
+                title: "Distância da borda",
+                min: 0,
+                max: 60,
+                step: 1,
+                defaultValue: defaultArrows.inset,
+                unit: "px",
+                hidden: (a: ArrowsSettings) => !a.show,
+            },
+            size: {
+                type: ControlType.Number,
+                title: "Tamanho",
+                min: 16,
+                max: 96,
+                step: 1,
+                defaultValue: defaultArrows.size,
+                unit: "px",
+                hidden: (a: ArrowsSettings) => !a.show,
+            },
+            iconSize: {
+                type: ControlType.Number,
+                title: "Tamanho do ícone",
+                min: 6,
+                max: 64,
+                step: 1,
+                defaultValue: defaultArrows.iconSize,
+                unit: "px",
+                hidden: (a: ArrowsSettings) => !a.show,
+            },
+            radius: {
+                type: ControlType.Number,
+                title: "Raio da borda",
+                min: 0,
+                max: 999,
+                step: 1,
+                defaultValue: defaultArrows.radius,
+                unit: "px",
+                hidden: (a: ArrowsSettings) => !a.show,
+            },
+            color: {
+                type: ControlType.Color,
+                title: "Cor do ícone",
+                defaultValue: defaultArrows.color,
+                hidden: (a: ArrowsSettings) => !a.show,
+            },
+            background: {
+                type: ControlType.Color,
+                title: "Fundo",
+                defaultValue: defaultArrows.background,
+                hidden: (a: ArrowsSettings) => !a.show,
+            },
+            blur: {
+                type: ControlType.Number,
+                title: "Blur do fundo",
+                min: 0,
+                max: 40,
+                step: 1,
+                defaultValue: defaultArrows.blur,
+                unit: "px",
+                hidden: (a: ArrowsSettings) => !a.show,
+            },
+            strokeColor: {
+                type: ControlType.Color,
+                title: "Contorno",
+                defaultValue: defaultArrows.strokeColor,
+                hidden: (a: ArrowsSettings) => !a.show,
+            },
+            strokeWidth: {
+                type: ControlType.Number,
+                title: "Espessura do contorno",
+                min: 0,
+                max: 8,
+                step: 1,
+                defaultValue: defaultArrows.strokeWidth,
+                unit: "px",
+                hidden: (a: ArrowsSettings) => !a.show,
+            },
+        },
     },
-    dotColor: {
-        type: ControlType.Color,
-        title: "Cor do indicador",
-        defaultValue: "rgba(255,255,255,0.5)",
+
+    dots: {
+        type: ControlType.Object,
+        title: "Indicadores",
+        controls: {
+            show: {
+                type: ControlType.Boolean,
+                title: "Mostrar",
+                defaultValue: defaultDots.show,
+            },
+            position: {
+                type: ControlType.Enum,
+                title: "Posição",
+                options: NAV_POSITION_OPTIONS,
+                optionTitles: NAV_POSITION_TITLES,
+                defaultValue: defaultDots.position,
+                hidden: (d: DotsSettings) => !d.show,
+            },
+            inset: {
+                type: ControlType.Number,
+                title: "Distância da borda",
+                min: 0,
+                max: 60,
+                step: 1,
+                defaultValue: defaultDots.inset,
+                unit: "px",
+                hidden: (d: DotsSettings) => !d.show,
+            },
+            size: {
+                type: ControlType.Number,
+                title: "Tamanho",
+                min: 4,
+                max: 32,
+                step: 1,
+                defaultValue: defaultDots.size,
+                unit: "px",
+                hidden: (d: DotsSettings) => !d.show,
+            },
+            gap: {
+                type: ControlType.Number,
+                title: "Espaço entre",
+                min: 0,
+                max: 40,
+                step: 1,
+                defaultValue: defaultDots.gap,
+                unit: "px",
+                hidden: (d: DotsSettings) => !d.show,
+            },
+            padding: {
+                type: ControlType.Number,
+                title: "Preenchimento do fundo",
+                min: 0,
+                max: 32,
+                step: 1,
+                defaultValue: defaultDots.padding,
+                unit: "px",
+                hidden: (d: DotsSettings) => !d.show,
+            },
+            backgroundColor: {
+                type: ControlType.Color,
+                title: "Fundo (pílula)",
+                defaultValue: defaultDots.backgroundColor,
+                hidden: (d: DotsSettings) => !d.show,
+            },
+            blur: {
+                type: ControlType.Number,
+                title: "Blur do fundo",
+                min: 0,
+                max: 40,
+                step: 1,
+                defaultValue: defaultDots.blur,
+                unit: "px",
+                hidden: (d: DotsSettings) => !d.show,
+            },
+            strokeColor: {
+                type: ControlType.Color,
+                title: "Contorno",
+                defaultValue: defaultDots.strokeColor,
+                hidden: (d: DotsSettings) => !d.show,
+            },
+            strokeWidth: {
+                type: ControlType.Number,
+                title: "Espessura do contorno",
+                min: 0,
+                max: 8,
+                step: 1,
+                defaultValue: defaultDots.strokeWidth,
+                unit: "px",
+                hidden: (d: DotsSettings) => !d.show,
+            },
+            activeColor: {
+                type: ControlType.Color,
+                title: "Ativo",
+                defaultValue: defaultDots.activeColor,
+                hidden: (d: DotsSettings) => !d.show,
+            },
+            inactiveColor: {
+                type: ControlType.Color,
+                title: "Inativo",
+                defaultValue: defaultDots.inactiveColor,
+                hidden: (d: DotsSettings) => !d.show,
+            },
+        },
     },
-    dotActiveColor: {
-        type: ControlType.Color,
-        title: "Cor do indicador ativo",
-        defaultValue: "#FFFFFF",
+
+    counter: {
+        type: ControlType.Object,
+        title: "Contador",
+        controls: {
+            show: {
+                type: ControlType.Boolean,
+                title: "Mostrar",
+                defaultValue: defaultCounter.show,
+            },
+            position: {
+                type: ControlType.Enum,
+                title: "Posição",
+                options: NAV_POSITION_OPTIONS,
+                optionTitles: NAV_POSITION_TITLES,
+                defaultValue: defaultCounter.position,
+                hidden: (c: CounterSettings) => !c.show,
+            },
+            inset: {
+                type: ControlType.Number,
+                title: "Distância da borda",
+                min: 0,
+                max: 60,
+                step: 1,
+                defaultValue: defaultCounter.inset,
+                unit: "px",
+                hidden: (c: CounterSettings) => !c.show,
+            },
+            textColor: {
+                type: ControlType.Color,
+                title: "Texto",
+                defaultValue: defaultCounter.textColor,
+                hidden: (c: CounterSettings) => !c.show,
+            },
+            background: {
+                type: ControlType.Color,
+                title: "Fundo",
+                defaultValue: defaultCounter.background,
+                hidden: (c: CounterSettings) => !c.show,
+            },
+            fontSize: {
+                type: ControlType.Number,
+                title: "Tamanho do texto",
+                min: 8,
+                max: 32,
+                step: 1,
+                defaultValue: defaultCounter.fontSize,
+                unit: "px",
+                hidden: (c: CounterSettings) => !c.show,
+            },
+        },
     },
 })
