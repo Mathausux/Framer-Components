@@ -15,6 +15,12 @@ Historico de sincronizacao entre Codex, Claude e outros agentes.
 | Codex | Instalar skill `framer-motion-animator` autorizada por `skillinstall` | `Skills/framer-motion-animator/SKILL.md` | concluido |
 | Codex | Instalar skill `caveman` autorizada por `skillinstall` | `Skills/caveman/README.md`, `Skills/caveman/SKILL.md` | concluido |
 
+## 2026-08-13
+
+| Agente | Tarefa | Arquivos | Status |
+| --- | --- | --- | --- |
+| Claude | Criar componente CMS Gallery Slideshow (conecta a Collection via seletor de campo Gallery) | `Framer Codes Component/AYVU/CMSGallerySlideshow.tsx`, `Sync/log.md` | concluido |
+
 ## Decisoes
 
 - `Sync/sync` deve permanecer leve para economizar contexto e creditos.
