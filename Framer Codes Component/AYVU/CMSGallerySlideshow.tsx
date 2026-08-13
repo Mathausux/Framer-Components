@@ -47,16 +47,17 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
     // Modo "canvas": lê as <img> renderizadas dentro do elemento apontado
     // pelo seletor (ex.: um Collection List já conectado à Collection do
     // CMS) e observa mutações para acompanhar atualizações do CMS.
+    // O ref do elemento selecionado pode só ficar disponível depois da
+    // primeira renderização (dependendo da ordem de montagem no canvas), e
+    // mudar `.current` não dispara o efeito de novo sozinho — por isso
+    // fazemos polling até encontrar o nó e então observamos mutações nele.
     useEffect(() => {
         if (dataSource !== "canvas") return
 
-        const node = source?.current
-        if (!node) {
-            setCanvasImages([])
-            return
-        }
+        let observer: MutationObserver | null = null
+        let attachedNode: HTMLElement | null = null
 
-        const extractImages = () => {
+        const extractImages = (node: HTMLElement) => {
             const seen = new Set<string>()
             const found: GalleryImage[] = []
 
@@ -82,17 +83,36 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
             setCanvasImages(found)
         }
 
-        extractImages()
+        const syncNode = () => {
+            const node = source?.current ?? null
+            if (node === attachedNode) return
 
-        const observer = new MutationObserver(extractImages)
-        observer.observe(node, {
-            childList: true,
-            subtree: true,
-            attributes: true,
-            attributeFilter: ["src", "srcset", "style"],
-        })
+            observer?.disconnect()
+            observer = null
+            attachedNode = node
 
-        return () => observer.disconnect()
+            if (!node) {
+                setCanvasImages([])
+                return
+            }
+
+            extractImages(node)
+            observer = new MutationObserver(() => extractImages(node))
+            observer.observe(node, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ["src", "srcset", "style"],
+            })
+        }
+
+        syncNode()
+        const pollId = setInterval(syncNode, 300)
+
+        return () => {
+            clearInterval(pollId)
+            observer?.disconnect()
+        }
     }, [dataSource, source])
 
     const images = dataSource === "canvas" ? canvasImages : manualImages

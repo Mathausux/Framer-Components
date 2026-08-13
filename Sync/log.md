@@ -21,6 +21,7 @@ Historico de sincronizacao entre Codex, Claude e outros agentes.
 | --- | --- | --- | --- |
 | Claude | Criar componente CMS Gallery Slideshow (conecta a Collection via seletor de campo Gallery) | `Framer Codes Component/AYVU/CMSGallerySlideshow.tsx`, `Sync/log.md` | concluido |
 | Claude | Adicionar seletor de elemento do Canvas (ControlType.ComponentInstance) como forma alternativa de conectar ao CMS exposto no canvas | `Framer Codes Component/AYVU/CMSGallerySlideshow.tsx`, `Sync/log.md` | concluido |
+| Claude | Corrigir leitura do elemento do Canvas: ref.current podia nao estar pronto no primeiro efeito e nunca reativar; adicionado polling ate anexar o observer | `Framer Codes Component/AYVU/CMSGallerySlideshow.tsx`, `Sync/log.md` | concluido |
 
 ## Decisoes
 
