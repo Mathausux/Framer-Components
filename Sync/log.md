@@ -27,6 +27,7 @@ Historico de sincronizacao entre Codex, Claude e outros agentes.
 | Claude | Expandir setas, indicadores e contador para grupos de props configuraveis (posicao, tamanho, cores, blur, contorno, layout separado/agrupado), no padrao do componente de referencia | `Framer Codes Component/AYVU/CMSGallerySlideshow.tsx`, `Sync/log.md` | concluido |
 | Claude | Adicionar suporte a video (CMS e manual): extracao de <video> do elemento conectado no Canvas, prop "Itens" manual com tipo imagem/video por item, e opcao "Aguardar video" para avancar so quando o video termina | `Framer Codes Component/AYVU/CMSGallerySlideshow.tsx`, `Sync/log.md` | concluido |
 | Claude | Corrigir arrasto: slide vizinho (proximo/anterior) agora acompanha o dedo em tempo real durante o drag, eliminando o fundo preto que aparecia atras do slide atual | `Framer Codes Component/AYVU/CMSGallerySlideshow.tsx`, `Sync/log.md` | concluido |
+| Claude | Detectar campo File do CMS (mp4 importado): Framer renderiza esse campo como link <a href>, nao <video>; extracao agora identifica links apontando para arquivos de video e os reproduz como slide de video | `Framer Codes Component/AYVU/CMSGallerySlideshow.tsx`, `Sync/log.md` | concluido |
 
 ## Decisoes
 

@@ -319,6 +319,27 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
                 }
             })
 
+            // Um campo do tipo File (usado para importar .mp4 no CMS) é
+            // renderizado pela Framer como um link, não como <video>. Detecta
+            // qualquer <a href> apontando para um arquivo de vídeo.
+            node.querySelectorAll<HTMLAnchorElement>("a[href]").forEach(
+                (a) => {
+                    const href = a.href
+                    if (!href || seen.has(href)) return
+                    if (!/\.(mp4|webm|mov|m4v|ogv|ogg)(\?.*)?$/i.test(href))
+                        return
+                    seen.add(href)
+                    found.push({
+                        type: "video",
+                        src: href,
+                        alt:
+                            a.getAttribute("aria-label") ??
+                            a.textContent?.trim() ??
+                            "",
+                    })
+                }
+            )
+
             node.querySelectorAll<HTMLElement>(
                 "[style*='background-image']"
             ).forEach((el) => {
@@ -345,7 +366,7 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
             childList: true,
             subtree: true,
             attributes: true,
-            attributeFilter: ["src", "srcset", "style", "poster"],
+            attributeFilter: ["src", "srcset", "style", "poster", "href"],
         })
 
         return () => observer.disconnect()
