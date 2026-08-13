@@ -395,7 +395,20 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
     const goNext = () => goTo(index + 1, 1)
     const goPrev = () => goTo(index - 1, -1)
 
+    // Enquanto o usuário arrasta, o slide vizinho (próximo ou anterior)
+    // aparece já encostado na borda que está sendo revelada, acompanhando o
+    // dedo em tempo real, em vez de mostrar o fundo do container por baixo
+    // do slide atual.
+    const [peekDirection, setPeekDirection] = useState<0 | 1 | -1>(0)
+    const [dragOffsetPx, setDragOffsetPx] = useState(0)
+
     const currentSlide = slides[index]
+    const nextSlide = loop
+        ? slides[(index + 1) % Math.max(total, 1)]
+        : slides[index + 1]
+    const prevSlide = loop
+        ? slides[(index - 1 + Math.max(total, 1)) % Math.max(total, 1)]
+        : slides[index - 1]
     const currentIsVideo = currentSlide?.type === "video"
     // Se o slide atual é um vídeo e "Aguardar vídeo" está ativo, o avanço
     // não usa o intervalo — ele acontece pelo evento onEnded do <video>.
@@ -429,6 +442,16 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
         loop,
     ])
 
+    const handleDrag = (
+        _event: MouseEvent | TouchEvent | PointerEvent,
+        info: PanInfo
+    ) => {
+        setDragOffsetPx(info.offset.x)
+        if (info.offset.x < -4) setPeekDirection(1)
+        else if (info.offset.x > 4) setPeekDirection(-1)
+        else setPeekDirection(0)
+    }
+
     const handleDragEnd = (
         _event: MouseEvent | TouchEvent | PointerEvent,
         info: PanInfo
@@ -439,6 +462,46 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
         } else if (info.offset.x > swipeThreshold) {
             goPrev()
         }
+        setPeekDirection(0)
+        setDragOffsetPx(0)
+    }
+
+    const renderSlideMedia = (slide: GallerySlide | undefined) => {
+        if (!slide) return null
+        if (slide.type === "video") {
+            return (
+                <video
+                    src={slide.src}
+                    poster={slide.poster}
+                    aria-label={slide.alt ?? ""}
+                    muted
+                    loop
+                    playsInline
+                    style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit,
+                        display: "block",
+                        pointerEvents: "none",
+                    }}
+                />
+            )
+        }
+        return (
+            <img
+                src={slide.src}
+                alt={slide.alt ?? ""}
+                style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit,
+                    display: "block",
+                    pointerEvents: "none",
+                    userSelect: "none",
+                }}
+                draggable={false}
+            />
+        )
     }
 
     const variants = {
@@ -677,6 +740,21 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
                     </div>
                 ) : (
                     <>
+                        {peekDirection !== 0 && (
+                            <div
+                                style={{
+                                    ...slideStyle,
+                                    transform: `translateX(calc(${
+                                        peekDirection === 1 ? "100%" : "-100%"
+                                    } + ${dragOffsetPx}px))`,
+                                }}
+                            >
+                                {renderSlideMedia(
+                                    peekDirection === 1 ? nextSlide : prevSlide
+                                )}
+                            </div>
+                        )}
+
                         <AnimatePresence initial={false} custom={direction} mode="popLayout">
                             <motion.div
                                 key={index}
@@ -688,9 +766,10 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
                                 transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                                 drag={hasMultiple ? "x" : false}
                                 dragConstraints={{ left: 0, right: 0 }}
-                                dragElastic={0.6}
-                                onDragEnd={handleDragEnd}
+                                dragElastic={1}
                                 style={slideStyle}
+                                onDrag={handleDrag}
+                                onDragEnd={handleDragEnd}
                             >
                                 {currentSlide?.type === "video" ? (
                                     <video
