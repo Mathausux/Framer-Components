@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useLayoutEffect, useRef, useState } from "react"
 import { AnimatePresence, motion, type PanInfo } from "framer-motion"
 import { addPropertyControls, ControlType } from "framer"
 
@@ -6,10 +6,13 @@ import { addPropertyControls, ControlType } from "framer"
  * CMS Gallery Slideshow
  *
  * Duas formas de conectar ao CMS:
- * 1. Canvas (recomendado): use o seletor "Elemento CMS" para apontar para
- *    qualquer elemento já no canvas conectado à sua Collection (Collection
- *    List/Grid com um campo Gallery). O componente lê as imagens renderizadas
- *    dentro dele automaticamente, inclusive quando o CMS atualiza.
+ * 1. Canvas (recomendado): conecte, no seletor "Elemento CMS", um Collection
+ *    List/Grid já vinculado à sua Collection (com um campo Gallery). O
+ *    elemento conectado é renderizado internamente (invisível) e o
+ *    componente lê as imagens que ele produz, acompanhando atualizações via
+ *    MutationObserver. Framer não permite que componentes de código leiam
+ *    dados do CMS diretamente — por isso a leitura acontece no DOM já
+ *    renderizado, não em uma API de dados.
  * 2. Manual: arraste este componente para dentro de um Collection List e
  *    vincule o campo Gallery diretamente na prop "Galeria".
  *
@@ -21,7 +24,7 @@ import { addPropertyControls, ControlType } from "framer"
 export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
     const {
         dataSource = "canvas",
-        source,
+        collectionSource,
         images: manualImages = [],
         autoplay = true,
         interval = 4,
@@ -43,21 +46,23 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
     const [isHovering, setIsHovering] = useState(false)
     const [canvasImages, setCanvasImages] = useState<GalleryImage[]>([])
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+    const collectionWrapperRef = useRef<HTMLDivElement>(null)
 
-    // Modo "canvas": lê as <img> renderizadas dentro do elemento apontado
-    // pelo seletor (ex.: um Collection List já conectado à Collection do
-    // CMS) e observa mutações para acompanhar atualizações do CMS.
-    // O ref do elemento selecionado pode só ficar disponível depois da
-    // primeira renderização (dependendo da ordem de montagem no canvas), e
-    // mudar `.current` não dispara o efeito de novo sozinho — por isso
-    // fazemos polling até encontrar o nó e então observamos mutações nele.
-    useEffect(() => {
-        if (dataSource !== "canvas") return
+    // Modo "canvas": o elemento conectado via ControlType.ComponentInstance
+    // (ex.: um Collection List já vinculado à Collection) é renderizado
+    // dentro de collectionWrapperRef, invisível. Depois de montado, lemos as
+    // <img>/background-image produzidas por ele e observamos mutações para
+    // acompanhar trocas de dados do CMS.
+    useLayoutEffect(() => {
+        if (dataSource !== "canvas") {
+            setCanvasImages([])
+            return
+        }
 
-        let observer: MutationObserver | null = null
-        let attachedNode: HTMLElement | null = null
+        const node = collectionWrapperRef.current
+        if (!node) return
 
-        const extractImages = (node: HTMLElement) => {
+        const extractImages = () => {
             const seen = new Set<string>()
             const found: GalleryImage[] = []
 
@@ -83,37 +88,18 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
             setCanvasImages(found)
         }
 
-        const syncNode = () => {
-            const node = source?.current ?? null
-            if (node === attachedNode) return
+        extractImages()
 
-            observer?.disconnect()
-            observer = null
-            attachedNode = node
+        const observer = new MutationObserver(extractImages)
+        observer.observe(node, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ["src", "srcset", "style"],
+        })
 
-            if (!node) {
-                setCanvasImages([])
-                return
-            }
-
-            extractImages(node)
-            observer = new MutationObserver(() => extractImages(node))
-            observer.observe(node, {
-                childList: true,
-                subtree: true,
-                attributes: true,
-                attributeFilter: ["src", "srcset", "style"],
-            })
-        }
-
-        syncNode()
-        const pollId = setInterval(syncNode, 300)
-
-        return () => {
-            clearInterval(pollId)
-            observer?.disconnect()
-        }
-    }, [dataSource, source])
+        return () => observer.disconnect()
+    }, [dataSource, collectionSource])
 
     const images = dataSource === "canvas" ? canvasImages : manualImages
     const total = images.length
@@ -132,7 +118,7 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
     const goNext = () => goTo(index + 1, 1)
     const goPrev = () => goTo(index - 1, -1)
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (!autoplay || !hasMultiple) return
         if (pauseOnHover && isHovering) return
 
@@ -183,31 +169,6 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
     } as const
 
     const activeVariant = variants[transitionStyle] ?? variants.fade
-
-    if (total === 0) {
-        return (
-            <div
-                style={{
-                    ...containerStyle,
-                    borderRadius,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    background: "#1A1A1A",
-                    color: "#8A8A8A",
-                    fontSize: 13,
-                    fontFamily: "inherit",
-                    textAlign: "center",
-                    padding: 16,
-                }}
-            >
-                {dataSource === "canvas"
-                    ? "Selecione, no painel de propriedades, um elemento do canvas conectado à sua Collection do CMS (ex.: um Collection List com campo Gallery)."
-                    : "Conecte este componente a uma Collection e selecione o campo de Galeria no painel de propriedades."}
-            </div>
-        )
-    }
-
     const currentImage = images[index]
 
     return (
@@ -216,79 +177,97 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
             onMouseEnter={() => setIsHovering(true)}
             onMouseLeave={() => setIsHovering(false)}
         >
-            <AnimatePresence initial={false} custom={direction} mode="popLayout">
-                <motion.div
-                    key={index}
-                    custom={direction}
-                    variants={activeVariant}
-                    initial="initial"
-                    animate="animate"
-                    exit="exit"
-                    transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                    drag={hasMultiple ? "x" : false}
-                    dragConstraints={{ left: 0, right: 0 }}
-                    dragElastic={0.6}
-                    onDragEnd={handleDragEnd}
-                    style={slideStyle}
-                >
-                    <img
-                        src={currentImage?.src}
-                        alt={currentImage?.alt ?? ""}
-                        style={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit,
-                            display: "block",
-                            pointerEvents: "none",
-                            userSelect: "none",
-                        }}
-                        draggable={false}
-                    />
-                </motion.div>
-            </AnimatePresence>
+            {dataSource === "canvas" && (
+                <div ref={collectionWrapperRef} style={hiddenSourceStyle} aria-hidden="true">
+                    {collectionSource}
+                </div>
+            )}
 
-            {showArrows && hasMultiple && (
+            {total === 0 ? (
+                <div style={emptyStateStyle}>
+                    {dataSource === "canvas"
+                        ? collectionSource
+                            ? "Nenhuma imagem encontrada dentro do elemento conectado. Confirme que ele está vinculado a uma Collection com campo Gallery."
+                            : "Conecte, no painel de propriedades, um Collection List já vinculado à sua Collection do CMS através do seletor \"Elemento CMS\"."
+                        : "Conecte este componente a uma Collection e selecione o campo de Galeria no painel de propriedades."}
+                </div>
+            ) : (
                 <>
-                    <button
-                        aria-label="Imagem anterior"
-                        onClick={goPrev}
-                        style={{ ...arrowStyle, left: 12, color: arrowColor }}
-                    >
-                        ‹
-                    </button>
-                    <button
-                        aria-label="Próxima imagem"
-                        onClick={goNext}
-                        style={{ ...arrowStyle, right: 12, color: arrowColor }}
-                    >
-                        ›
-                    </button>
+                    <AnimatePresence initial={false} custom={direction} mode="popLayout">
+                        <motion.div
+                            key={index}
+                            custom={direction}
+                            variants={activeVariant}
+                            initial="initial"
+                            animate="animate"
+                            exit="exit"
+                            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                            drag={hasMultiple ? "x" : false}
+                            dragConstraints={{ left: 0, right: 0 }}
+                            dragElastic={0.6}
+                            onDragEnd={handleDragEnd}
+                            style={slideStyle}
+                        >
+                            <img
+                                src={currentImage?.src}
+                                alt={currentImage?.alt ?? ""}
+                                style={{
+                                    width: "100%",
+                                    height: "100%",
+                                    objectFit,
+                                    display: "block",
+                                    pointerEvents: "none",
+                                    userSelect: "none",
+                                }}
+                                draggable={false}
+                            />
+                        </motion.div>
+                    </AnimatePresence>
+
+                    {showArrows && hasMultiple && (
+                        <>
+                            <button
+                                aria-label="Imagem anterior"
+                                onClick={goPrev}
+                                style={{ ...arrowStyle, left: 12, color: arrowColor }}
+                            >
+                                ‹
+                            </button>
+                            <button
+                                aria-label="Próxima imagem"
+                                onClick={goNext}
+                                style={{ ...arrowStyle, right: 12, color: arrowColor }}
+                            >
+                                ›
+                            </button>
+                        </>
+                    )}
+
+                    {showCounter && hasMultiple && (
+                        <div style={counterStyle}>
+                            {index + 1} / {total}
+                        </div>
+                    )}
+
+                    {showDots && hasMultiple && (
+                        <div style={dotsContainerStyle}>
+                            {images.map((_, dotIndex) => (
+                                <button
+                                    key={dotIndex}
+                                    aria-label={`Ir para a imagem ${dotIndex + 1}`}
+                                    onClick={() => goTo(dotIndex, dotIndex > index ? 1 : -1)}
+                                    style={{
+                                        ...dotStyle,
+                                        background:
+                                            dotIndex === index ? dotActiveColor : dotColor,
+                                        transform:
+                                            dotIndex === index ? "scale(1.2)" : "scale(1)",
+                                    }}
+                                />
+                            ))}
+                        </div>
+                    )}
                 </>
-            )}
-
-            {showCounter && hasMultiple && (
-                <div style={counterStyle}>
-                    {index + 1} / {total}
-                </div>
-            )}
-
-            {showDots && hasMultiple && (
-                <div style={dotsContainerStyle}>
-                    {images.map((_, dotIndex) => (
-                        <button
-                            key={dotIndex}
-                            aria-label={`Ir para a imagem ${dotIndex + 1}`}
-                            onClick={() => goTo(dotIndex, dotIndex > index ? 1 : -1)}
-                            style={{
-                                ...dotStyle,
-                                background:
-                                    dotIndex === index ? dotActiveColor : dotColor,
-                                transform:
-                                    dotIndex === index ? "scale(1.2)" : "scale(1)",
-                            }}
-                        />
-                    ))}
-                </div>
             )}
         </div>
     )
@@ -301,7 +280,7 @@ interface GalleryImage {
 
 interface CMSGallerySlideshowProps {
     dataSource: "canvas" | "manual"
-    source?: React.RefObject<HTMLElement>
+    collectionSource?: React.ReactNode
     images: GalleryImage[]
     autoplay: boolean
     interval: number
@@ -324,6 +303,32 @@ const containerStyle: React.CSSProperties = {
     height: "100%",
     overflow: "hidden",
     background: "#000000",
+}
+
+// O Collection List conectado é renderizado aqui, fora da vista, apenas
+// para que possamos ler as imagens que ele produz no DOM.
+const hiddenSourceStyle: React.CSSProperties = {
+    position: "absolute",
+    inset: 0,
+    opacity: 0,
+    pointerEvents: "none",
+    zIndex: -1,
+    overflow: "hidden",
+}
+
+const emptyStateStyle: React.CSSProperties = {
+    position: "relative",
+    width: "100%",
+    height: "100%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "#1A1A1A",
+    color: "#8A8A8A",
+    fontSize: 13,
+    fontFamily: "inherit",
+    textAlign: "center",
+    padding: 16,
 }
 
 const slideStyle: React.CSSProperties = {
@@ -391,11 +396,11 @@ addPropertyControls(CMSGallerySlideshow, {
         optionTitles: ["Selecionar no Canvas", "Manual / Collection List"],
         defaultValue: "canvas",
     },
-    source: {
+    collectionSource: {
         type: ControlType.ComponentInstance,
         title: "Elemento CMS",
         description:
-            "Selecione no canvas o elemento já conectado à sua Collection do CMS (ex.: um Collection List/Grid com campo Gallery). As imagens renderizadas dentro dele são usadas no slideshow.",
+            "Conecte um Collection List/Grid já vinculado à sua Collection do CMS (com um campo Gallery). Ele é renderizado internamente (invisível) e as imagens que produz alimentam o slideshow.",
         hidden: (props) => props.dataSource !== "canvas",
     },
     images: {
