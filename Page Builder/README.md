@@ -4,14 +4,22 @@ Editor visual estilo Framer, com projetos versionados no GitHub (1 repositório 
 
 Este diretório contém o app do editor. Consulte `../Sync/log.md` para o histórico de fases já concluídas e `docs/PLANO.md` para o planejamento completo.
 
-## Fase 0 — Fundação (atual)
+## Fase 0 — Fundação ✅
 
-Escopo desta fase:
 - Schema JSON que representa um projeto (páginas, árvore de nós, breakpoints, coleções, tokens de design).
 - Esqueleto do editor em Next.js (App Router + TypeScript).
 - Camada de integração com GitHub via Octokit: criar repositório do projeto, ler e salvar `project.json`.
 
-Fora de escopo nesta fase (fases futuras): canvas de drag-and-drop, renderização visual, exportação de código, deploy automático.
+## Fase 1 — Canvas MVP ✅ (atual)
+
+- Página `/projects/[repo]` que carrega o `project.json` e renderiza a primeira página do projeto no canvas.
+- Seleção de blocos por clique, drag-and-drop simples via `@dnd-kit` (arrastar bloco da paleta para um frame, mover um bloco existente entre frames).
+- Blocos suportados: frame, texto, imagem, botão.
+- Inspector para editar nome, props (conteúdo, src, rótulo) e estilos (JSON) do bloco selecionado por breakpoint, com opção de excluir.
+- Alternância entre breakpoints (desktop/tablet/mobile) com cascata de estilos.
+- Botão "Salvar" faz commit do `project.json` atualizado no repositório via `PUT /api/projects/[repo]`.
+
+Fora de escopo nesta fase (fases futuras): múltiplas páginas na UI, reordenação fina (posição exata) de blocos, animações, CMS, exportação de código, deploy automático.
 
 ## Setup
 
@@ -38,18 +46,25 @@ Page Builder/
     ├── src/
     │   ├── app/
     │   │   ├── page.tsx                    # lista/criação de projetos
+    │   │   ├── projects/[repo]/page.tsx    # editor visual (canvas + paleta + inspector)
     │   │   └── api/
     │   │       └── projects/
     │   │           ├── route.ts            # GET (listar) / POST (criar)
     │   │           └── [repo]/route.ts      # GET (ler) / PUT (salvar) project.json
+    │   ├── components/
+    │   │   ├── Canvas.tsx     # renderiza a árvore, seleção e drag-and-drop
+    │   │   ├── Palette.tsx    # blocos arrastáveis (frame, texto, imagem, botão)
+    │   │   └── Inspector.tsx  # edição de nome/props/estilos do bloco selecionado
     │   └── lib/
-    │       ├── schema.ts     # tipos TypeScript do modelo de dados
-    │       ├── github.ts     # integração com GitHub (Octokit)
+    │       ├── schema.ts       # tipos TypeScript do modelo de dados
+    │       ├── tree.ts         # operações imutáveis sobre a árvore de nós
+    │       ├── nodeRenderer.ts # resolução de estilos por breakpoint + defaults visuais
+    │       ├── github.ts       # integração com GitHub (Octokit)
     │       └── projectTemplate.ts # project.json inicial de um projeto novo
     ├── package.json
     └── tsconfig.json
 ```
 
-## Próxima fase (Fase 1)
+## Próxima fase (Fase 2)
 
-Canvas MVP: renderizar a árvore do `project.json` visualmente, permitir seleção e edição básica de blocos (frame, texto, imagem, botão), com drag-and-drop simples.
+Responsividade e estilos: editor visual de estilos (spacing, cor, tipografia) por breakpoint, substituindo a edição via JSON bruto do Inspector.

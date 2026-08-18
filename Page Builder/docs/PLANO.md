@@ -28,9 +28,12 @@ Editor App (Next.js)
   - Schema JSON do projeto (`schema/project.schema.json` + `src/lib/schema.ts`).
   - Esqueleto Next.js do editor.
   - Integração GitHub (Octokit): criar repo, ler/salvar `project.json`.
-- **Fase 1 — Canvas MVP**
-  - Renderizar a árvore do `project.json` visualmente.
-  - Seleção, drag-and-drop simples, blocos básicos (frame, texto, imagem, botão).
+- **Fase 1 — Canvas MVP** ✅ (`Page Builder/app/src/app/projects/[repo]`, `src/components/{Canvas,Palette,Inspector}.tsx`, `src/lib/tree.ts`)
+  - Renderiza a árvore do `project.json` visualmente (só a primeira página do projeto, por enquanto).
+  - Seleção por clique, drag-and-drop simples (paleta → frame, mover nó entre frames), blocos básicos (frame, texto, imagem, botão).
+  - Inspector para editar nome, props e estilos (JSON) do bloco selecionado, com botão de excluir.
+  - Troca de breakpoint ativo (desktop/tablet/mobile) com cascata de estilos.
+  - Botão "Salvar" persiste via `PUT /api/projects/[repo]` (commit no GitHub).
 - **Fase 2 — Responsividade + estilos**
   - Breakpoints (desktop/tablet/mobile), editor visual de estilos.
 - **Fase 3 — Component Library**

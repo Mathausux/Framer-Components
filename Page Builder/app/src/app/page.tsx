@@ -112,9 +112,14 @@ export default function HomePage() {
               <div style={{ fontSize: 13, color: "#777" }}>
                 Atualizado em {new Date(p.updatedAt).toLocaleString("pt-BR")}
               </div>
-              <a href={p.htmlUrl} target="_blank" rel="noreferrer" style={{ fontSize: 13 }}>
-                Ver no GitHub →
-              </a>
+              <div style={{ display: "flex", gap: 12, marginTop: 4 }}>
+                <a href={`/projects/${p.repo}`} style={{ fontSize: 13 }}>
+                  Abrir editor →
+                </a>
+                <a href={p.htmlUrl} target="_blank" rel="noreferrer" style={{ fontSize: 13 }}>
+                  Ver no GitHub →
+                </a>
+              </div>
             </li>
           ))}
         </ul>

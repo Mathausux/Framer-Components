@@ -27,6 +27,7 @@ Historico de sincronizacao entre Codex, Claude e outros agentes.
 | --- | --- | --- | --- |
 | Claude | Planejar Page Builder estilo Framer por fases (armazenamento em 1 repo GitHub por projeto) | conversa (planejamento) | concluido |
 | Claude | Fase 0 do Page Builder: schema JSON do projeto, esqueleto Next.js do editor, integracao GitHub (Octokit) para criar/ler/salvar project.json | `Page Builder/README.md`, `Page Builder/docs/PLANO.md`, `Page Builder/schema/project.schema.json`, `Page Builder/app/**` | concluido |
+| Claude | Fase 1 do Page Builder: canvas MVP com selecao, drag-and-drop (@dnd-kit), paleta de blocos, inspector de props/estilos e pagina de editor por projeto que salva via PUT | `Page Builder/app/src/lib/tree.ts`, `Page Builder/app/src/lib/nodeRenderer.ts`, `Page Builder/app/src/components/Canvas.tsx`, `Page Builder/app/src/components/Palette.tsx`, `Page Builder/app/src/components/Inspector.tsx`, `Page Builder/app/src/app/projects/[repo]/page.tsx`, `Page Builder/README.md`, `Page Builder/docs/PLANO.md` | concluido |
 
 ## Decisoes
 
