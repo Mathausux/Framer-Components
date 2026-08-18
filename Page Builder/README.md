@@ -33,6 +33,14 @@ npm run dev
 
 Abra `http://localhost:3000`. A tela inicial lista os projetos (repositórios que contêm um `project.json` na raiz, marcados com o topic `page-builder-project`) e permite criar um novo projeto, o que cria um repositório novo no GitHub com um `project.json` inicial.
 
+### Testar sem GitHub configurado (modo local)
+
+Se `GITHUB_TOKEN`/`GITHUB_OWNER` não estiverem definidos, o app usa
+automaticamente um driver de armazenamento local (`src/lib/localStore.ts`),
+salvando os projetos em `app/.local-projects/` (ignorado pelo git). Serve só
+para rodar e testar o editor rapidamente — a tela inicial mostra um aviso
+quando esse modo está ativo. Para uso real, configure o `.env.local`.
+
 ## Estrutura
 
 ```
@@ -48,18 +56,21 @@ Page Builder/
     │   │   ├── page.tsx                    # lista/criação de projetos
     │   │   ├── projects/[repo]/page.tsx    # editor visual (canvas + paleta + inspector)
     │   │   └── api/
+    │   │       ├── config/route.ts         # GET: qual driver de storage está ativo
     │   │       └── projects/
     │   │           ├── route.ts            # GET (listar) / POST (criar)
     │   │           └── [repo]/route.ts      # GET (ler) / PUT (salvar) project.json
     │   ├── components/
-    │   │   ├── Canvas.tsx     # renderiza a árvore, seleção e drag-and-drop
+    │   │   ├── Canvas.tsx     # renderiza a árvore e a seleção (drag-and-drop via DndContext do pai)
     │   │   ├── Palette.tsx    # blocos arrastáveis (frame, texto, imagem, botão)
     │   │   └── Inspector.tsx  # edição de nome/props/estilos do bloco selecionado
     │   └── lib/
     │       ├── schema.ts       # tipos TypeScript do modelo de dados
     │       ├── tree.ts         # operações imutáveis sobre a árvore de nós
     │       ├── nodeRenderer.ts # resolução de estilos por breakpoint + defaults visuais
-    │       ├── github.ts       # integração com GitHub (Octokit)
+    │       ├── store.ts        # escolhe o driver de storage (github ou local)
+    │       ├── github.ts       # driver de storage via GitHub (Octokit)
+    │       ├── localStore.ts   # driver de storage local em disco (dev/teste)
     │       └── projectTemplate.ts # project.json inicial de um projeto novo
     ├── package.json
     └── tsconfig.json

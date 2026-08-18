@@ -2,10 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import {
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
 import { Node, NodeType, PageBuilderProject } from "@/lib/schema";
 import { findNode, generateNodeId, insertNode, moveNode, removeNode, updateNode } from "@/lib/tree";
 import { DEFAULT_STYLES_BY_TYPE, NODE_TYPE_LABELS } from "@/lib/nodeRenderer";
-import { Canvas } from "@/components/Canvas";
+import { Canvas, DragData } from "@/components/Canvas";
 import { Palette } from "@/components/Palette";
 import { Inspector } from "@/components/Inspector";
 
@@ -20,6 +27,9 @@ export default function ProjectEditorPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeBreakpointId, setActiveBreakpointId] = useState("desktop");
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } })
+  );
 
   useEffect(() => {
     async function load() {
@@ -82,6 +92,21 @@ export default function ProjectEditorPage() {
     updateRoot(moveNode(root, nodeId, newParentId));
   }
 
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over) return;
+
+    const parentId = String(over.id);
+    const data = active.data.current as DragData | undefined;
+    if (!data) return;
+
+    if (data.kind === "palette-item") {
+      handleDropPaletteItem(parentId, data.nodeType);
+    } else if (data.kind === "canvas-node" && data.nodeId !== parentId) {
+      handleMoveNode(data.nodeId, parentId);
+    }
+  }
+
   function handleChangeProps(nodeId: string, props: Record<string, unknown>) {
     updateRoot(updateNode(root, nodeId, { props }));
   }
@@ -122,6 +147,7 @@ export default function ProjectEditorPage() {
   }
 
   return (
+    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
     <div style={{ display: "grid", gridTemplateColumns: "220px 1fr 280px", height: "100vh" }}>
       <aside style={{ borderRight: "1px solid #eee", padding: 16, overflowY: "auto" }}>
         <Palette />
@@ -182,8 +208,6 @@ export default function ProjectEditorPage() {
             activeBreakpointId={activeBreakpointId}
             selectedId={selectedId}
             onSelect={setSelectedId}
-            onDropPaletteItem={handleDropPaletteItem}
-            onMoveNode={handleMoveNode}
           />
         </div>
       </section>
@@ -200,5 +224,6 @@ export default function ProjectEditorPage() {
         />
       </aside>
     </div>
+    </DndContext>
   );
 }

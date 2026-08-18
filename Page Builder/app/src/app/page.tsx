@@ -16,6 +16,14 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [creating, setCreating] = useState(false);
+  const [storage, setStorage] = useState<"github" | "local" | null>(null);
+
+  useEffect(() => {
+    fetch("/api/config")
+      .then((res) => res.json())
+      .then((data) => setStorage(data.storage))
+      .catch(() => setStorage(null));
+  }, []);
 
   async function loadProjects() {
     setLoading(true);
@@ -71,8 +79,24 @@ export default function HomePage() {
     <main style={{ maxWidth: 720, margin: "0 auto", padding: "48px 24px" }}>
       <h1 style={{ fontSize: 28, marginBottom: 4 }}>Page Builder</h1>
       <p style={{ color: "#555", marginTop: 0 }}>
-        Fase 0 — cada projeto é um repositório GitHub próprio.
+        Fase 0 e 1 — cada projeto é um repositório GitHub próprio.
       </p>
+
+      {storage === "local" && (
+        <p
+          style={{
+            background: "#fff8e1",
+            border: "1px solid #ffe082",
+            padding: 12,
+            borderRadius: 4,
+            fontSize: 13,
+          }}
+        >
+          Modo local ativo: GITHUB_TOKEN/GITHUB_OWNER não configurados, então os
+          projetos estão sendo salvos em disco (<code>.local-projects/</code>) só
+          para desenvolvimento/testes — nada é enviado ao GitHub.
+        </p>
+      )}
 
       <form onSubmit={handleCreate} style={{ display: "flex", gap: 8, margin: "24px 0" }}>
         <input

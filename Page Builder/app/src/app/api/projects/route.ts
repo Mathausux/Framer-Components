@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createProjectRepo, listProjectRepos } from "@/lib/github";
+import { getStore } from "@/lib/store";
 import { createInitialProject } from "@/lib/projectTemplate";
 
 export async function GET() {
   try {
-    const projects = await listProjectRepos();
+    const projects = await getStore().listProjects();
     return NextResponse.json({ projects });
   } catch (error) {
     return NextResponse.json({ error: (error as Error).message }, { status: 500 });
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     const project = createInitialProject(projectId, name);
-    const summary = await createProjectRepo(projectId, project);
+    const summary = await getStore().createProject(projectId, project);
 
     return NextResponse.json({ project: summary }, { status: 201 });
   } catch (error) {

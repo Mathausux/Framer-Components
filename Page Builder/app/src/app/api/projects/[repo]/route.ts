@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getProjectFile, saveProjectFile } from "@/lib/github";
+import { getStore } from "@/lib/store";
 import { PageBuilderProject } from "@/lib/schema";
 
 export async function GET(_request: NextRequest, { params }: { params: { repo: string } }) {
   try {
-    const { project, sha } = await getProjectFile(params.repo);
+    const { project, sha } = await getStore().getProject(params.repo);
     return NextResponse.json({ project, sha });
   } catch (error) {
     return NextResponse.json({ error: (error as Error).message }, { status: 500 });
@@ -23,7 +23,7 @@ export async function PUT(request: NextRequest, { params }: { params: { repo: st
       );
     }
 
-    const result = await saveProjectFile(params.repo, project, sha);
+    const result = await getStore().saveProject(params.repo, project, sha);
     return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json({ error: (error as Error).message }, { status: 500 });

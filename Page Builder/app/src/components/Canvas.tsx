@@ -1,11 +1,11 @@
 "use client";
 
 import { CSSProperties, MouseEvent } from "react";
-import { DndContext, DragEndEvent, useDraggable, useDroppable } from "@dnd-kit/core";
+import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { Breakpoint, Node, NodeType } from "@/lib/schema";
 import { DEFAULT_STYLES_BY_TYPE, NODE_TYPE_LABELS, resolveNodeStyles } from "@/lib/nodeRenderer";
 
-type DragData =
+export type DragData =
   | { kind: "palette-item"; nodeType: NodeType }
   | { kind: "canvas-node"; nodeId: string };
 
@@ -17,50 +17,28 @@ export interface CanvasProps {
   activeBreakpointId: string;
   selectedId: string | null;
   onSelect: (id: string) => void;
-  onDropPaletteItem: (parentId: string, nodeType: NodeType) => void;
-  onMoveNode: (nodeId: string, newParentId: string) => void;
 }
 
-export function Canvas({
-  root,
-  breakpoints,
-  activeBreakpointId,
-  selectedId,
-  onSelect,
-  onDropPaletteItem,
-  onMoveNode,
-}: CanvasProps) {
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (!over) return;
-
-    const parentId = String(over.id);
-    const data = active.data.current as DragData | undefined;
-    if (!data) return;
-
-    if (data.kind === "palette-item") {
-      onDropPaletteItem(parentId, data.nodeType);
-    } else if (data.kind === "canvas-node" && data.nodeId !== parentId) {
-      onMoveNode(data.nodeId, parentId);
-    }
-  }
-
+/**
+ * Renderiza a árvore do projeto. Precisa estar dentro de um <DndContext>
+ * fornecido por quem a usa (junto com a <Palette />), já que blocos podem
+ * ser arrastados entre os dois.
+ */
+export function Canvas({ root, breakpoints, activeBreakpointId, selectedId, onSelect }: CanvasProps) {
   return (
-    <DndContext onDragEnd={handleDragEnd}>
-      <div
-        style={{ background: "#f5f5f5", minHeight: "100%", padding: 24 }}
-        onClick={() => onSelect(root.id)}
-      >
-        <NodeView
-          node={root}
-          breakpoints={breakpoints}
-          activeBreakpointId={activeBreakpointId}
-          selectedId={selectedId}
-          onSelect={onSelect}
-          isRoot
-        />
-      </div>
-    </DndContext>
+    <div
+      style={{ background: "#f5f5f5", minHeight: "100%", padding: 24 }}
+      onClick={() => onSelect(root.id)}
+    >
+      <NodeView
+        node={root}
+        breakpoints={breakpoints}
+        activeBreakpointId={activeBreakpointId}
+        selectedId={selectedId}
+        onSelect={onSelect}
+        isRoot
+      />
+    </div>
   );
 }
 
