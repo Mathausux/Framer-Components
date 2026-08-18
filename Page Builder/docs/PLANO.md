@@ -53,10 +53,11 @@ Editor App (Next.js)
   - Testado de ponta a ponta: o site exportado foi buildado e rodado de forma independente (`next build && next start`) e renderizou corretamente — inclusive animação (Framer Motion) e repetição estática dos itens de uma cms-collection.
   - Limitação conhecida: componentes da biblioteca (`component-ref`, ex: `Framer Codes Component/AYVU/...`) ainda não são copiados automaticamente na exportação — viram um comentário no código indicando onde adicionar manualmente. Fica para uma iteração futura.
   - "Exportar" salva o projeto primeiro (a exportação lê o `project.json` persistido, não o estado em memória do editor).
-- **Fase 6 — Persistência GitHub completa**
-  - Autosave com debounce, versionamento, botão publicar, preview deployments.
-- **Fase 6 — Persistência GitHub completa**
-  - Autosave com debounce, versionamento, botão publicar, preview deployments.
+- **Fase 6 — Persistência GitHub completa** ✅ (`src/components/VersionHistory.tsx`, `src/lib/store.ts`, `src/lib/github.ts`, `src/lib/localStore.ts`)
+  - Autosave: salva ~2s após a última mudança, sem precisar clicar em "Salvar" (indicador de status no header); botão manual continua disponível para salvar na hora.
+  - Histórico de versões: no GitHub, é o histórico de commits do `project.json` (`repos.listCommits`); no modo local, snapshots em disco (últimos 20). Modal "Histórico" lista e permite "Restaurar" qualquer versão anterior (vira um novo commit/salvamento, não reescreve histórico).
+  - "Publicar": exporta o site atualizado e mostra um link real de "Deploy on Vercel" apontando pro repositório do projeto com `root-directory=export/site` — sem depender de credenciais de deploy. No modo local (sem GitHub), mostra aviso explicando por que não é possível.
+  - Durante o teste, dois bugs reais corrigidos: rotas GET de versões precisavam de `export const dynamic = "force-dynamic"` (Next.js as trataria como estáticas/cacheadas por padrão); e qualquer erro de ação (salvar/exportar/publicar) derrubava a tela inteira do editor porque reusava o mesmo estado `error` do carregamento inicial — separado em `actionError` (banner dispensável) vs. erro de carregamento (tela cheia).
 
 ## Mapeamento de recursos pagos do Framer → equivalente gratuito
 

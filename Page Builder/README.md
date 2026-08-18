@@ -39,7 +39,7 @@ Este diretório contém o app do editor. Consulte `../Sync/log.md` para o histó
 - Nós texto/imagem dentro do template ganham, no Inspector, um seletor "Vincular a campo da coleção" — trocando conteúdo fixo por dado vindo da coleção.
 - **Animações**: uma animação por nó (`AnimationEditor` no Inspector — disparo onLoad/onScroll/onHover/onTap, efeito fade/slide/escala, duração e atraso), renderizada ao vivo no canvas via Framer Motion (`src/lib/motion.ts`), não é só metadado salvo.
 
-## Fase 5 — Exportação dupla ✅ (atual)
+## Fase 5 — Exportação dupla ✅
 
 - Botão "Exportar" no header do editor gera código a partir do `project.json` e commita no próprio repositório do projeto (salva o projeto primeiro, pra garantir que exporta o estado atual):
   - `export/site/` — site Next.js completo e publicável: uma rota (App Router) por página, CSS Module por página com media queries por breakpoint, `package.json`/`next.config.mjs`/`tsconfig.json` prontos pra `npm install && npm run dev` ou deploy.
@@ -48,7 +48,14 @@ Este diretório contém o app do editor. Consulte `../Sync/log.md` para o histó
 - Testado gerando, buildando (`next build`) e rodando (`next start`) o site exportado de forma independente — funciona de verdade, não é só código de exemplo.
 - Limitação conhecida: componentes da biblioteca (`component-ref`) ainda não são copiados automaticamente — viram um comentário `{/* Componente ... */}` no lugar, indicando pra adicionar manualmente. Fica pra uma iteração futura.
 
-Fora de escopo nestas fases (fases futuras): múltiplas páginas na UI, reordenação fina (posição exata) de blocos, timeline com múltiplas animações por nó, exportação de componentes da biblioteca, autosave/deploy automático.
+## Fase 6 — Persistência GitHub completa ✅ (atual)
+
+- **Autosave**: salva ~2s após a última mudança, sem precisar clicar em "Salvar" — indicador de status ("Salvando…"/"Salvo automaticamente") no header. O botão "Salvar" manual continua ali para salvar na hora.
+- **Histórico de versões**: botão "Histórico" abre um modal listando versões salvas (no GitHub, é o histórico real de commits do `project.json`; no modo local, snapshots em disco, últimos 20) com "Restaurar" — que grava o conteúdo daquela versão como o estado atual (um novo salvamento/commit, sem reescrever histórico).
+- **Publicar**: exporta o site atualizado e mostra um link real de "Deploy on Vercel" (`vercel.com/new/clone?repository-url=...&root-directory=export/site`) — sem precisar de nenhuma credencial de deploy. No modo local, explica que publicar requer o projeto configurado com GitHub.
+- Dois bugs reais corrigidos durante o teste: rotas GET de versões precisavam de `export const dynamic = "force-dynamic"` (Next.js as trataria como estáticas por padrão, servindo respostas desatualizadas); e qualquer erro de ação (salvar/exportar/publicar) derrubava a tela inteira do editor por reusar o mesmo estado de erro do carregamento inicial — agora é um banner dispensável (`actionError`), separado do erro de carregamento.
+
+Fora de escopo (não planejado): múltiplas páginas na UI, reordenação fina (posição exata) de blocos, timeline com múltiplas animações por nó, exportação de componentes da biblioteca, deploy automático de verdade (o "Publicar" gera o link, não dispara o deploy).
 
 ## Setup
 
@@ -87,14 +94,20 @@ Page Builder/
     │   │   └── api/
     │   │       ├── config/route.ts         # GET: qual driver de storage está ativo
     │   │       └── projects/
-    │   │           ├── route.ts            # GET (listar) / POST (criar)
-    │   │           └── [repo]/route.ts      # GET (ler) / PUT (salvar) project.json
+    │   │           ├── route.ts                          # GET (listar) / POST (criar)
+    │   │           └── [repo]/
+    │   │               ├── route.ts                      # GET (ler) / PUT (salvar) project.json
+    │   │               ├── export/route.ts                # POST: gera e grava export/site + export/component
+    │   │               └── versions/
+    │   │                   ├── route.ts                   # GET: lista o histórico de versões
+    │   │                   └── [versionId]/route.ts        # GET: conteúdo de uma versão específica
     │   ├── components/
     │   │   ├── Canvas.tsx             # renderiza a árvore, seleção, repetição de cms-collection e animações
     │   │   ├── Palette.tsx            # blocos arrastáveis (frame, texto, imagem, botão, coleção, componentes)
     │   │   ├── Inspector.tsx          # edição de nome/props/estilos/animação/binding do bloco selecionado
     │   │   ├── StyleEditor.tsx        # campos visuais de estilo por breakpoint
     │   │   ├── CollectionsManager.tsx # modal para gerenciar coleções (CMS)
+    │   │   ├── VersionHistory.tsx     # modal de histórico de versões + restaurar
     │   │   └── library/               # wrappers estáticos dos componentes de Framer Codes Component/
     │   └── lib/
     │       ├── schema.ts             # tipos TypeScript do modelo de dados
@@ -109,7 +122,7 @@ Page Builder/
     │       │   └── exportComponent.ts   # monta os componentes de arquivo único (export/component)
     │       ├── componentLibrary.ts   # registry dos componentes disponíveis na Paleta
     │       ├── framerCanvasShim.ts   # shim do pacote "framer" (addPropertyControls/ControlType)
-    │       ├── store.ts              # escolhe o driver de storage (github ou local); inclui writeFiles
+    │       ├── store.ts              # escolhe o driver de storage (github ou local); writeFiles + listVersions/getVersionContent
     │       ├── github.ts             # driver de storage via GitHub (Octokit)
     │       ├── localStore.ts         # driver de storage local em disco (dev/teste)
     │       └── projectTemplate.ts    # project.json inicial de um projeto novo
@@ -118,6 +131,6 @@ Page Builder/
     └── tsconfig.json
 ```
 
-## Próxima fase (Fase 6)
+## Todas as fases do plano original (0-6) estão concluídas
 
-Persistência GitHub completa: autosave com debounce, histórico de versões navegável, botão de publicar (deploy do `export/site` na Vercel/Netlify) e preview deployments.
+Ideias para continuar (não planejadas formalmente): múltiplas páginas navegáveis na UI do editor, reordenação fina de blocos por posição exata, exportação automática dos componentes da biblioteca, timeline com múltiplas animações por nó, deploy automatizado de verdade (hoje "Publicar" gera o link, o clique final é do usuário).

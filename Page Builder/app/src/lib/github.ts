@@ -31,6 +31,12 @@ export interface ProjectSummary {
   htmlUrl: string;
 }
 
+export interface ProjectVersion {
+  id: string;
+  message: string;
+  date: string;
+}
+
 /**
  * Lista repositórios do dono configurado que carregam o topic do Page Builder.
  */
@@ -107,7 +113,7 @@ export async function createProjectRepo(
  */
 export async function getProjectFile(
   repoName: string
-): Promise<{ project: PageBuilderProject; sha: string }> {
+): Promise<{ project: PageBuilderProject; sha: string; htmlUrl: string }> {
   const octokit = getOctokit();
   const owner = getOwner();
 
@@ -122,7 +128,11 @@ export async function getProjectFile(
   }
 
   const raw = Buffer.from(data.content, "base64").toString("utf-8");
-  return { project: JSON.parse(raw) as PageBuilderProject, sha: data.sha };
+  return {
+    project: JSON.parse(raw) as PageBuilderProject,
+    sha: data.sha,
+    htmlUrl: `https://github.com/${owner}/${repoName}`,
+  };
 }
 
 /**
@@ -193,4 +203,51 @@ export async function writeFiles(
   }
 
   return { paths };
+}
+
+/**
+ * Histórico de commits que tocaram o project.json, mais recente primeiro
+ * (equivalente ao histórico de versões do projeto — cada "Salvar" é um commit).
+ */
+export async function listVersions(repoName: string): Promise<ProjectVersion[]> {
+  const octokit = getOctokit();
+  const owner = getOwner();
+
+  const { data } = await octokit.repos.listCommits({
+    owner,
+    repo: repoName,
+    path: PROJECT_FILE_PATH,
+    per_page: 20,
+  });
+
+  return data.map((commit) => ({
+    id: commit.sha,
+    message: commit.commit.message,
+    date: commit.commit.author?.date ?? commit.commit.committer?.date ?? "",
+  }));
+}
+
+/**
+ * Conteúdo do project.json no commit `versionId` (sha).
+ */
+export async function getVersionContent(
+  repoName: string,
+  versionId: string
+): Promise<PageBuilderProject> {
+  const octokit = getOctokit();
+  const owner = getOwner();
+
+  const { data } = await octokit.repos.getContent({
+    owner,
+    repo: repoName,
+    path: PROJECT_FILE_PATH,
+    ref: versionId,
+  });
+
+  if (Array.isArray(data) || data.type !== "file" || !data.content) {
+    throw new Error(`${PROJECT_FILE_PATH} não encontrado na versão ${versionId}`);
+  }
+
+  const raw = Buffer.from(data.content, "base64").toString("utf-8");
+  return JSON.parse(raw) as PageBuilderProject;
 }

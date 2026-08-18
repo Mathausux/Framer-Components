@@ -2,7 +2,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import crypto from "crypto";
 import { PageBuilderProject } from "./schema";
-import { ProjectSummary } from "./store";
+import { ProjectSummary, ProjectVersion } from "./store";
 
 /**
  * Driver de armazenamento local em disco, usado apenas quando GITHUB_TOKEN /
@@ -15,6 +15,27 @@ const STORAGE_DIR = path.join(process.cwd(), ".local-projects");
 
 function projectFilePath(projectId: string): string {
   return path.join(STORAGE_DIR, projectId, "project.json");
+}
+
+function historyDir(projectId: string): string {
+  return path.join(STORAGE_DIR, projectId, ".history");
+}
+
+const MAX_HISTORY_ENTRIES = 20;
+
+/** Grava um snapshot do projeto no histórico local e descarta os mais antigos além do limite. */
+async function appendHistorySnapshot(projectId: string, project: PageBuilderProject): Promise<void> {
+  const dir = historyDir(projectId);
+  await fs.mkdir(dir, { recursive: true });
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  await fs.writeFile(path.join(dir, `${timestamp}.json`), JSON.stringify(project, null, 2), "utf-8");
+
+  const entries = (await fs.readdir(dir)).filter((f) => f.endsWith(".json")).sort();
+  const excess = entries.length - MAX_HISTORY_ENTRIES;
+  if (excess > 0) {
+    await Promise.all(entries.slice(0, excess).map((f) => fs.unlink(path.join(dir, f))));
+  }
 }
 
 function computeSha(content: string): string {
@@ -68,9 +89,9 @@ export async function createProject(
 
 export async function getProject(
   projectId: string
-): Promise<{ project: PageBuilderProject; sha: string }> {
+): Promise<{ project: PageBuilderProject; sha: string; htmlUrl: string }> {
   const raw = await fs.readFile(projectFilePath(projectId), "utf-8");
-  return { project: JSON.parse(raw) as PageBuilderProject, sha: computeSha(raw) };
+  return { project: JSON.parse(raw) as PageBuilderProject, sha: computeSha(raw), htmlUrl: "#" };
 }
 
 export async function saveProject(
@@ -87,8 +108,36 @@ export async function saveProject(
   const updated: PageBuilderProject = { ...project, updatedAt: new Date().toISOString() };
   const nextRaw = JSON.stringify(updated, null, 2);
   await fs.writeFile(projectFilePath(projectId), nextRaw, "utf-8");
+  await appendHistorySnapshot(projectId, updated);
 
   return { sha: computeSha(nextRaw) };
+}
+
+export async function listVersions(projectId: string): Promise<ProjectVersion[]> {
+  const dir = historyDir(projectId);
+  let entries: string[];
+  try {
+    entries = (await fs.readdir(dir)).filter((f) => f.endsWith(".json"));
+  } catch {
+    return [];
+  }
+
+  return entries
+    .sort()
+    .reverse()
+    .map((filename) => {
+      const id = filename.replace(/\.json$/, "");
+      const isoDate = id.replace(/-(\d{2})-(\d{2})-(\d{3}Z)$/, ":$1:$2.$3");
+      return { id, message: "Salvo", date: isoDate };
+    });
+}
+
+export async function getVersionContent(
+  projectId: string,
+  versionId: string
+): Promise<PageBuilderProject> {
+  const raw = await fs.readFile(path.join(historyDir(projectId), `${versionId}.json`), "utf-8");
+  return JSON.parse(raw) as PageBuilderProject;
 }
 
 export async function writeFiles(

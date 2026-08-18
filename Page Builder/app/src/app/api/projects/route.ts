@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getStore } from "@/lib/store";
 import { createInitialProject } from "@/lib/projectTemplate";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const projects = await getStore().listProjects();

@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getStore } from "@/lib/store";
 import { PageBuilderProject } from "@/lib/schema";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(_request: NextRequest, { params }: { params: { repo: string } }) {
   try {
-    const { project, sha } = await getStore().getProject(params.repo);
-    return NextResponse.json({ project, sha });
+    const { project, sha, htmlUrl } = await getStore().getProject(params.repo);
+    return NextResponse.json({ project, sha, htmlUrl });
   } catch (error) {
     return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }

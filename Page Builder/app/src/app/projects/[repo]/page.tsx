@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import {
   DndContext,
@@ -26,6 +26,9 @@ import { Canvas, DragData } from "@/components/Canvas";
 import { Palette } from "@/components/Palette";
 import { Inspector } from "@/components/Inspector";
 import { CollectionsManager } from "@/components/CollectionsManager";
+import { VersionHistory } from "@/components/VersionHistory";
+
+const AUTOSAVE_DELAY_MS = 2000;
 
 export default function ProjectEditorPage() {
   const params = useParams<{ repo: string }>();
@@ -33,6 +36,7 @@ export default function ProjectEditorPage() {
 
   const [project, setProject] = useState<PageBuilderProject | null>(null);
   const [sha, setSha] = useState<string | null>(null);
+  const [htmlUrl, setHtmlUrl] = useState<string>("#");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,9 +45,17 @@ export default function ProjectEditorPage() {
   const [exporting, setExporting] = useState(false);
   const [exportResult, setExportResult] = useState<string[] | null>(null);
   const [collectionsModalOpen, setCollectionsModalOpen] = useState(false);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [deployUrl, setDeployUrl] = useState<string | null>(null);
+  const [autosaveStatus, setAutosaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  /** Erro de uma ação (salvar/exportar/publicar) — mostrado como banner dispensável, não substitui o editor inteiro. */
+  const [actionError, setActionError] = useState<string | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } })
   );
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const skipNextAutosave = useRef(true);
 
   useEffect(() => {
     async function load() {
@@ -55,7 +67,9 @@ export default function ProjectEditorPage() {
         if (!res.ok) throw new Error(data.error || "Erro ao carregar projeto.");
         setProject(data.project);
         setSha(data.sha);
+        setHtmlUrl(data.htmlUrl ?? "#");
         setSelectedId(data.project.pages[0]?.root.id ?? null);
+        skipNextAutosave.current = true;
       } catch (err) {
         setError((err as Error).message);
       } finally {
@@ -64,6 +78,33 @@ export default function ProjectEditorPage() {
     }
     load();
   }, [repo]);
+
+  // Autosave: salva ~2s depois da última mudança, sem precisar clicar em
+  // "Salvar". Ignora a primeira mudança de `project` (o carregamento inicial)
+  // pra não disparar um save desnecessário assim que a página abre.
+  useEffect(() => {
+    if (!project || loading) return;
+    if (skipNextAutosave.current) {
+      skipNextAutosave.current = false;
+      return;
+    }
+
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = setTimeout(async () => {
+      setAutosaveStatus("saving");
+      try {
+        await persistProject();
+        setAutosaveStatus("saved");
+      } catch {
+        setAutosaveStatus("error");
+      }
+    }, AUTOSAVE_DELAY_MS);
+
+    return () => {
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project, loading]);
 
   if (loading) return <p style={{ padding: 24 }}>Carregando projeto…</p>;
   if (error) return <p style={{ padding: 24, color: "#c0392b" }}>{error}</p>;
@@ -238,21 +279,42 @@ export default function ProjectEditorPage() {
   }
 
   async function handleSave() {
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
     setSaving(true);
-    setError(null);
+    setActionError(null);
     try {
       await persistProject();
+      setAutosaveStatus("saved");
     } catch (err) {
-      setError((err as Error).message);
+      setActionError((err as Error).message);
+      setAutosaveStatus("error");
     } finally {
       setSaving(false);
     }
   }
 
+  async function handleRestoreVersion(versionId: string) {
+    const res = await fetch(`/api/projects/${repo}/versions/${versionId}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Erro ao carregar versão.");
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    skipNextAutosave.current = true;
+    setProject(data.project);
+    // Salva a versão restaurada imediatamente como o novo estado atual.
+    const putRes = await fetch(`/api/projects/${repo}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ project: data.project, sha }),
+    });
+    const putData = await putRes.json();
+    if (!putRes.ok) throw new Error(putData.error || "Erro ao restaurar versão.");
+    setSha(putData.sha);
+  }
+
   async function handleExport() {
     setExporting(true);
     setExportResult(null);
-    setError(null);
+    setActionError(null);
     try {
       // A exportação lê o project.json persistido, não o estado em memória —
       // salva primeiro pra garantir que reflete o que está no canvas agora.
@@ -262,9 +324,34 @@ export default function ProjectEditorPage() {
       if (!res.ok) throw new Error(data.error || "Erro ao exportar projeto.");
       setExportResult(data.paths);
     } catch (err) {
-      setError((err as Error).message);
+      setActionError((err as Error).message);
     } finally {
       setExporting(false);
+    }
+  }
+
+  async function handlePublish() {
+    if (htmlUrl === "#") {
+      setActionError(
+        "Publicar requer o projeto configurado com GitHub (GITHUB_TOKEN/GITHUB_OWNER) — no modo local não há repositório para conectar a um host."
+      );
+      return;
+    }
+    setPublishing(true);
+    setActionError(null);
+    try {
+      await persistProject();
+      const res = await fetch(`/api/projects/${repo}/export`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao exportar projeto.");
+      setExportResult(data.paths);
+      setDeployUrl(
+        `https://vercel.com/new/clone?repository-url=${encodeURIComponent(htmlUrl)}&root-directory=export%2Fsite`
+      );
+    } catch (err) {
+      setActionError((err as Error).message);
+    } finally {
+      setPublishing(false);
     }
   }
 
@@ -286,7 +373,16 @@ export default function ProjectEditorPage() {
           }}
         >
           <div>
-            <strong>{project.name}</strong>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+              <strong>{project.name}</strong>
+              <span style={{ fontSize: 11, color: "#999" }}>
+                {autosaveStatus === "saving" && "Salvando…"}
+                {autosaveStatus === "saved" && "Salvo automaticamente"}
+                {autosaveStatus === "error" && (
+                  <span style={{ color: "#c0392b" }}>Falha ao salvar automaticamente</span>
+                )}
+              </span>
+            </div>
             <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
               {project.breakpoints.map((bp) => (
                 <button
@@ -322,6 +418,33 @@ export default function ProjectEditorPage() {
               Coleções
             </button>
             <button
+              onClick={() => setHistoryModalOpen(true)}
+              style={{
+                padding: "8px 16px",
+                background: "#fff",
+                color: "#333",
+                border: "1px solid #ddd",
+                borderRadius: 6,
+                cursor: "pointer",
+              }}
+            >
+              Histórico
+            </button>
+            <button
+              onClick={handlePublish}
+              disabled={publishing}
+              style={{
+                padding: "8px 16px",
+                background: "#fff",
+                color: "#333",
+                border: "1px solid #ddd",
+                borderRadius: 6,
+                cursor: "pointer",
+              }}
+            >
+              {publishing ? "Publicando…" : "Publicar"}
+            </button>
+            <button
               onClick={handleExport}
               disabled={exporting}
               style={{
@@ -352,6 +475,30 @@ export default function ProjectEditorPage() {
           </div>
         </header>
 
+        {actionError && (
+          <div
+            style={{
+              background: "#fdecea",
+              borderBottom: "1px solid #f5c6cb",
+              padding: "8px 16px",
+              fontSize: 12,
+              color: "#c0392b",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 12,
+            }}
+          >
+            <span>{actionError}</span>
+            <button
+              onClick={() => setActionError(null)}
+              style={{ border: "none", background: "none", cursor: "pointer", color: "#c0392b" }}
+            >
+              ×
+            </button>
+          </div>
+        )}
+
         {exportResult && (
           <div
             style={{
@@ -371,6 +518,35 @@ export default function ProjectEditorPage() {
             </span>
             <button
               onClick={() => setExportResult(null)}
+              style={{ border: "none", background: "none", cursor: "pointer", color: "#555" }}
+            >
+              ×
+            </button>
+          </div>
+        )}
+
+        {deployUrl && (
+          <div
+            style={{
+              background: "#eef4ff",
+              borderBottom: "1px solid #cddcf5",
+              padding: "8px 16px",
+              fontSize: 12,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 12,
+            }}
+          >
+            <span>
+              Site exportado. Conecte o repositório a um host pra publicar de verdade:{" "}
+              <a href={deployUrl} target="_blank" rel="noreferrer" style={{ fontWeight: 600 }}>
+                Deploy no Vercel →
+              </a>{" "}
+              (aponta pra <code>export/site</code>; deploys seguintes acontecem sozinhos a cada commit).
+            </span>
+            <button
+              onClick={() => setDeployUrl(null)}
               style={{ border: "none", background: "none", cursor: "pointer", color: "#555" }}
             >
               ×
@@ -412,6 +588,9 @@ export default function ProjectEditorPage() {
         onClose={() => setCollectionsModalOpen(false)}
         initialSelectedId={activeCollectionId}
       />
+    )}
+    {historyModalOpen && (
+      <VersionHistory repo={repo} onClose={() => setHistoryModalOpen(false)} onRestore={handleRestoreVersion} />
     )}
     </DndContext>
   );
