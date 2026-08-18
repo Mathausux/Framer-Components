@@ -50,6 +50,6 @@ export const DEFAULT_STYLES_BY_TYPE: Record<Node["type"], CSSProperties> = {
     display: "inline-block",
   },
   "cms-collection": { display: "flex", flexDirection: "column", gap: 8, padding: 8 },
-  "component-ref": { padding: 8, border: "1px dashed #999" },
+  "component-ref": { display: "block", overflow: "hidden" },
   form: { display: "flex", flexDirection: "column", gap: 8, padding: 16 },
 };

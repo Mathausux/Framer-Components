@@ -18,13 +18,20 @@ Este diretório contém o app do editor. Consulte `../Sync/log.md` para o histó
 - Alternância entre breakpoints (desktop/tablet/mobile) com cascata de estilos.
 - Botão "Salvar" faz commit do `project.json` atualizado no repositório via `PUT /api/projects/[repo]`.
 
-## Fase 2 — Estilos visuais ✅ (atual)
+## Fase 2 — Estilos visuais ✅
 
 - `StyleEditor` no Inspector: campos visuais por breakpoint para layout (direção, alinhamento, espaço entre itens — só em containers), espaçamento (padding), dimensões (largura/altura), tipografia (tamanho, peso, cor, alinhamento — em texto/botão) e aparência (cor de fundo, cantos arredondados).
 - Deixar um campo vazio remove a propriedade do breakpoint ativo (herda do breakpoint maior) em vez de gravar um valor vazio.
 - Editor JSON bruto continua disponível, colapsado atrás de "Avançado: editar estilos como JSON", para qualquer propriedade CSS ainda sem campo visual.
 
-Fora de escopo nestas fases (fases futuras): múltiplas páginas na UI, reordenação fina (posição exata) de blocos, animações, CMS, exportação de código, deploy automático.
+## Fase 3 — Component Library ✅ (atual)
+
+- Os componentes de `Framer Codes Component/` (ex: `AYVU/CMSGallerySlideshow`) renderizam **de verdade** dentro do canvas — não é um placeholder. Isso é possível graças a um shim do pacote `framer` (`src/lib/framerCanvasShim.ts`, só existe de verdade dentro do editor do Framer) e a um wrapper estático (`src/components/library/`) que reexporta o componente original.
+- `src/lib/componentLibrary.ts` é o registry: id, nome, empresa, descrição, props padrão e um subconjunto curado de props editáveis (equivalente ao `propertyControls` do Framer) para cada componente disponível.
+- A Paleta ganhou a seção "Componentes"; soltar um no canvas cria um nó `component-ref` com as props padrão do registry, editáveis no Inspector.
+- Para adicionar um novo componente: crie um wrapper estático em `src/components/library/` e uma entrada em `componentLibrary.ts` (não há varredura dinâmica da pasta — mantém a resolução de módulos do webpack simples e verificável).
+
+Fora de escopo nestas fases (fases futuras): múltiplas páginas na UI, reordenação fina (posição exata) de blocos, animações no canvas, CMS de verdade (coleções dinâmicas), exportação de código, deploy automático.
 
 ## Setup
 
@@ -67,21 +74,25 @@ Page Builder/
     │   │           └── [repo]/route.ts      # GET (ler) / PUT (salvar) project.json
     │   ├── components/
     │   │   ├── Canvas.tsx      # renderiza a árvore e a seleção (drag-and-drop via DndContext do pai)
-    │   │   ├── Palette.tsx     # blocos arrastáveis (frame, texto, imagem, botão)
+    │   │   ├── Palette.tsx     # blocos arrastáveis (frame, texto, imagem, botão, componentes)
     │   │   ├── Inspector.tsx   # edição de nome/props/estilos do bloco selecionado
-    │   │   └── StyleEditor.tsx # campos visuais de estilo por breakpoint
+    │   │   ├── StyleEditor.tsx # campos visuais de estilo por breakpoint
+    │   │   └── library/        # wrappers estáticos dos componentes de Framer Codes Component/
     │   └── lib/
-    │       ├── schema.ts       # tipos TypeScript do modelo de dados
-    │       ├── tree.ts         # operações imutáveis sobre a árvore de nós
-    │       ├── nodeRenderer.ts # resolução de estilos por breakpoint + defaults visuais
-    │       ├── store.ts        # escolhe o driver de storage (github ou local)
-    │       ├── github.ts       # driver de storage via GitHub (Octokit)
-    │       ├── localStore.ts   # driver de storage local em disco (dev/teste)
-    │       └── projectTemplate.ts # project.json inicial de um projeto novo
+    │       ├── schema.ts             # tipos TypeScript do modelo de dados
+    │       ├── tree.ts               # operações imutáveis sobre a árvore de nós
+    │       ├── nodeRenderer.ts       # resolução de estilos por breakpoint + defaults visuais
+    │       ├── componentLibrary.ts   # registry dos componentes disponíveis na Paleta
+    │       ├── framerCanvasShim.ts   # shim do pacote "framer" (addPropertyControls/ControlType)
+    │       ├── store.ts              # escolhe o driver de storage (github ou local)
+    │       ├── github.ts             # driver de storage via GitHub (Octokit)
+    │       ├── localStore.ts         # driver de storage local em disco (dev/teste)
+    │       └── projectTemplate.ts    # project.json inicial de um projeto novo
+    ├── next.config.mjs   # alias webpack "framer" -> shim + resolve.modules p/ Framer Codes Component/
     ├── package.json
     └── tsconfig.json
 ```
 
-## Próxima fase (Fase 3)
+## Próxima fase (Fase 4)
 
-Component Library: integrar os componentes já existentes em `Framer Codes Component/` como blocos arrastáveis no canvas (tipo `component-ref`).
+CMS + Animações: coleções de dados com binding de campos (equivalente ao CMS do Framer) e uma timeline básica de animações (Framer Motion) no canvas.

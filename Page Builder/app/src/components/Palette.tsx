@@ -3,6 +3,8 @@
 import { useDraggable } from "@dnd-kit/core";
 import { NodeType } from "@/lib/schema";
 import { NODE_TYPE_LABELS } from "@/lib/nodeRenderer";
+import { COMPONENT_LIBRARY } from "@/lib/componentLibrary";
+import { DragData } from "./Canvas";
 
 const PALETTE_ITEMS: NodeType[] = ["frame", "text", "image", "button"];
 
@@ -13,8 +15,32 @@ export function Palette() {
         Blocos
       </h3>
       {PALETTE_ITEMS.map((type) => (
-        <PaletteItem key={type} type={type} />
+        <PaletteItem key={type} label={NODE_TYPE_LABELS[type]} data={{ kind: "palette-item", nodeType: type }} />
       ))}
+
+      {COMPONENT_LIBRARY.length > 0 && (
+        <>
+          <h3
+            style={{
+              fontSize: 13,
+              textTransform: "uppercase",
+              color: "#777",
+              margin: "16px 0 4px",
+            }}
+          >
+            Componentes
+          </h3>
+          {COMPONENT_LIBRARY.map((entry) => (
+            <PaletteItem
+              key={entry.id}
+              label={entry.name}
+              sublabel={entry.company}
+              data={{ kind: "palette-item", nodeType: "component-ref", componentId: entry.id }}
+            />
+          ))}
+        </>
+      )}
+
       <p style={{ fontSize: 12, color: "#999", marginTop: 8 }}>
         Arraste um bloco para dentro de um frame no canvas.
       </p>
@@ -22,10 +48,18 @@ export function Palette() {
   );
 }
 
-function PaletteItem({ type }: { type: NodeType }) {
+function PaletteItem({
+  label,
+  sublabel,
+  data,
+}: {
+  label: string;
+  sublabel?: string;
+  data: DragData;
+}) {
   const draggable = useDraggable({
-    id: `palette-${type}`,
-    data: { kind: "palette-item", nodeType: type },
+    id: `palette-${data.kind === "palette-item" ? data.nodeType : ""}-${label}`,
+    data,
   });
 
   return (
@@ -43,7 +77,8 @@ function PaletteItem({ type }: { type: NodeType }) {
         userSelect: "none",
       }}
     >
-      {NODE_TYPE_LABELS[type]}
+      <div>{label}</div>
+      {sublabel && <div style={{ fontSize: 11, color: "#999" }}>{sublabel}</div>}
     </div>
   );
 }

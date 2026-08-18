@@ -4,9 +4,10 @@ import { CSSProperties, MouseEvent } from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { Breakpoint, Node, NodeType } from "@/lib/schema";
 import { DEFAULT_STYLES_BY_TYPE, NODE_TYPE_LABELS, resolveNodeStyles } from "@/lib/nodeRenderer";
+import { getComponentLibraryEntry } from "@/lib/componentLibrary";
 
 export type DragData =
-  | { kind: "palette-item"; nodeType: NodeType }
+  | { kind: "palette-item"; nodeType: NodeType; componentId?: string }
   | { kind: "canvas-node"; nodeId: string };
 
 const CONTAINER_TYPES: NodeType[] = ["frame", "cms-collection", "form"];
@@ -109,6 +110,7 @@ function NodeView({
         />
       )}
       {node.type === "button" && ((node.props?.label as string) || "Botão")}
+      {node.type === "component-ref" && <ComponentRefView node={node} />}
       {isContainer &&
         node.children?.map((child) => (
           <NodeView
@@ -123,6 +125,34 @@ function NodeView({
       {isContainer && (node.children?.length ?? 0) === 0 && (
         <span style={{ fontSize: 12, color: "#aaa" }}>Solte um bloco aqui</span>
       )}
+    </div>
+  );
+}
+
+/**
+ * Renderiza o componente real da biblioteca (ex: os componentes de
+ * `Framer Codes Component/`) dentro do canvas. pointerEvents "none" evita
+ * que a interação interna do componente (botões, drag do slideshow) capture
+ * o clique/arraste que o Canvas usa para seleção e drag-and-drop do nó.
+ */
+function ComponentRefView({ node }: { node: Node }) {
+  const componentId = node.props?.componentId as string | undefined;
+  const entry = componentId ? getComponentLibraryEntry(componentId) : undefined;
+
+  if (!entry) {
+    return (
+      <div style={{ fontSize: 12, color: "#c0392b" }}>
+        Componente não encontrado: {componentId ?? "(sem componentId)"}
+      </div>
+    );
+  }
+
+  const Component = entry.component;
+  const componentProps = (node.props?.componentProps as Record<string, unknown>) ?? {};
+
+  return (
+    <div style={{ width: "100%", height: "100%", pointerEvents: "none" }}>
+      <Component {...componentProps} />
     </div>
   );
 }

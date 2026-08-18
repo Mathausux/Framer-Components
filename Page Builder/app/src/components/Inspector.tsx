@@ -3,6 +3,7 @@
 import { CSSProperties, useEffect, useState } from "react";
 import { Node } from "@/lib/schema";
 import { NODE_TYPE_LABELS } from "@/lib/nodeRenderer";
+import { EditablePropField, getComponentLibraryEntry } from "@/lib/componentLibrary";
 import { StyleEditor } from "./StyleEditor";
 
 export interface InspectorProps {
@@ -140,7 +141,151 @@ function PropsFields({
     );
   }
 
+  if (node.type === "component-ref") {
+    return <ComponentRefFields node={node} onChangeProps={onChangeProps} />;
+  }
+
   return null;
+}
+
+interface GalleryImage {
+  src: string;
+  alt?: string;
+}
+
+function ComponentRefFields({
+  node,
+  onChangeProps,
+}: {
+  node: Node;
+  onChangeProps: (nodeId: string, props: Record<string, unknown>) => void;
+}) {
+  const props = node.props ?? {};
+  const componentId = props.componentId as string | undefined;
+  const entry = componentId ? getComponentLibraryEntry(componentId) : undefined;
+
+  if (!entry) {
+    return (
+      <p style={{ fontSize: 12, color: "#c0392b" }}>
+        Componente não encontrado: {componentId ?? "(sem componentId)"}
+      </p>
+    );
+  }
+
+  const componentProps = (props.componentProps as Record<string, unknown>) ?? {};
+
+  function setComponentProp(key: string, value: unknown) {
+    onChangeProps(node.id, {
+      ...props,
+      componentProps: { ...componentProps, [key]: value },
+    });
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <p style={{ fontSize: 11, color: "#999", margin: 0 }}>{entry.description}</p>
+      {entry.editableProps.map((field) => (
+        <ComponentPropField
+          key={field.key}
+          field={field}
+          value={componentProps[field.key]}
+          onChange={(v) => setComponentProp(field.key, v)}
+        />
+      ))}
+    </div>
+  );
+}
+
+function ComponentPropField({
+  field,
+  value,
+  onChange,
+}: {
+  field: EditablePropField;
+  value: unknown;
+  onChange: (value: unknown) => void;
+}) {
+  if (field.kind === "boolean") {
+    return (
+      <label style={{ ...fieldLabelStyle, flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <input type="checkbox" checked={Boolean(value)} onChange={(e) => onChange(e.target.checked)} />
+        {field.label}
+      </label>
+    );
+  }
+
+  if (field.kind === "number") {
+    return (
+      <label style={fieldLabelStyle}>
+        {field.label}
+        <input
+          type="number"
+          style={fieldInputStyle}
+          min={field.min}
+          max={field.max}
+          step={field.step}
+          value={typeof value === "number" ? value : ""}
+          onChange={(e) => onChange(e.target.value === "" ? undefined : Number(e.target.value))}
+        />
+      </label>
+    );
+  }
+
+  if (field.kind === "color") {
+    return (
+      <label style={fieldLabelStyle}>
+        {field.label}
+        <input
+          type="text"
+          style={fieldInputStyle}
+          value={typeof value === "string" ? value : ""}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      </label>
+    );
+  }
+
+  if (field.kind === "select") {
+    return (
+      <label style={fieldLabelStyle}>
+        {field.label}
+        <select
+          style={fieldInputStyle}
+          value={typeof value === "string" ? value : ""}
+          onChange={(e) => onChange(e.target.value)}
+        >
+          {field.options.map(([v, l]) => (
+            <option key={v} value={v}>
+              {l}
+            </option>
+          ))}
+        </select>
+      </label>
+    );
+  }
+
+  // imageList: guarda como GalleryImage[] ({src}), edição como uma URL por linha.
+  const images = Array.isArray(value) ? (value as GalleryImage[]) : [];
+  const text = images.map((img) => img.src).join("\n");
+
+  return (
+    <label style={fieldLabelStyle}>
+      {field.label}
+      <textarea
+        style={{ ...fieldInputStyle, minHeight: 80 }}
+        defaultValue={text}
+        onBlur={(e) =>
+          onChange(
+            e.target.value
+              .split("\n")
+              .map((line) => line.trim())
+              .filter(Boolean)
+              .map((src) => ({ src }))
+          )
+        }
+      />
+    </label>
+  );
 }
 
 /**

@@ -12,6 +12,7 @@ import {
 import { Node, NodeType, PageBuilderProject } from "@/lib/schema";
 import { findNode, generateNodeId, insertNode, moveNode, removeNode, updateNode } from "@/lib/tree";
 import { DEFAULT_STYLES_BY_TYPE, NODE_TYPE_LABELS } from "@/lib/nodeRenderer";
+import { getComponentLibraryEntry } from "@/lib/componentLibrary";
 import { Canvas, DragData } from "@/components/Canvas";
 import { Palette } from "@/components/Palette";
 import { Inspector } from "@/components/Inspector";
@@ -67,21 +68,28 @@ export default function ProjectEditorPage() {
     });
   }
 
-  function handleDropPaletteItem(parentId: string, nodeType: NodeType) {
+  function handleDropPaletteItem(parentId: string, nodeType: NodeType, componentId?: string) {
     const isContainer = nodeType === "frame";
+    const libraryEntry = componentId ? getComponentLibraryEntry(componentId) : undefined;
+
     const newNode: Node = {
       id: generateNodeId(nodeType),
       type: nodeType,
-      name: NODE_TYPE_LABELS[nodeType],
-      props:
-        nodeType === "text"
+      name: libraryEntry?.name ?? NODE_TYPE_LABELS[nodeType],
+      props: libraryEntry
+        ? { componentId: libraryEntry.id, componentProps: { ...libraryEntry.defaultProps } }
+        : nodeType === "text"
           ? { content: "Novo texto" }
           : nodeType === "button"
             ? { label: "Botão" }
             : nodeType === "image"
               ? { src: "", alt: "" }
               : {},
-      styles: { desktop: DEFAULT_STYLES_BY_TYPE[nodeType] as Record<string, unknown> },
+      styles: {
+        desktop: (libraryEntry
+          ? { width: "100%", height: 300 }
+          : DEFAULT_STYLES_BY_TYPE[nodeType]) as Record<string, unknown>,
+      },
       children: isContainer ? [] : undefined,
     };
     updateRoot(insertNode(root, parentId, newNode));
@@ -101,7 +109,7 @@ export default function ProjectEditorPage() {
     if (!data) return;
 
     if (data.kind === "palette-item") {
-      handleDropPaletteItem(parentId, data.nodeType);
+      handleDropPaletteItem(parentId, data.nodeType, data.componentId);
     } else if (data.kind === "canvas-node" && data.nodeId !== parentId) {
       handleMoveNode(data.nodeId, parentId);
     }

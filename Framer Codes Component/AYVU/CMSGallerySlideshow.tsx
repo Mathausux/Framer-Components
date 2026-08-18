@@ -60,7 +60,7 @@ export default function CMSGallerySlideshow(props: CMSGallerySlideshowProps) {
 
         timerRef.current = setInterval(() => {
             setDirection(1)
-            setIndex((current) => {
+            setIndex((current: number) => {
                 const next = current + 1
                 if (next >= total) {
                     return loop ? 0 : current
@@ -331,13 +331,13 @@ addPropertyControls(CMSGallerySlideshow, {
         max: 20,
         step: 0.5,
         defaultValue: 4,
-        hidden: (props) => !props.autoplay,
+        hidden: (props: CMSGallerySlideshowProps) => !props.autoplay,
     },
     pauseOnHover: {
         type: ControlType.Boolean,
         title: "Pausar no hover",
         defaultValue: true,
-        hidden: (props) => !props.autoplay,
+        hidden: (props: CMSGallerySlideshowProps) => !props.autoplay,
     },
     loop: {
         type: ControlType.Boolean,

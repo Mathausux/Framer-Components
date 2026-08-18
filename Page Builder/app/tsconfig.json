@@ -16,7 +16,10 @@
     "plugins": [{ "name": "next" }],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "react": ["node_modules/@types/react"],
+      "framer-motion": ["node_modules/framer-motion"],
+      "framer": ["src/lib/framerCanvasShim.ts"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

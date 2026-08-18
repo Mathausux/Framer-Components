@@ -38,8 +38,11 @@ Editor App (Next.js)
   - Editor visual de estilos por breakpoint no Inspector: layout (direção, alinhamento, espaço entre itens) para containers, espaçamento, dimensões, tipografia (para texto/botão) e aparência (cor de fundo, cantos arredondados).
   - Campos vazios/"(herdado)" removem a propriedade do breakpoint ativo em vez de gravar um valor vazio.
   - Editor JSON bruto mantido como escape hatch avançado (`<details>` colapsável) para propriedades CSS ainda não cobertas visualmente.
-- **Fase 3 — Component Library**
-  - Integrar componentes de `Framer Codes Component/` como blocos arrastáveis.
+- **Fase 3 — Component Library** ✅ (`src/lib/componentLibrary.ts`, `src/lib/framerCanvasShim.ts`, `src/components/library/`)
+  - Componentes de `Framer Codes Component/` renderizam de verdade (não é placeholder) dentro do canvas, via um shim do pacote `framer` (só existe no runtime do editor do Framer) e um wrapper estático por componente.
+  - Registry (`componentLibrary.ts`) descreve cada componente disponível: id, nome, empresa, props padrão e um subconjunto curado de props editáveis no Inspector (equivalente aos `propertyControls` do Framer).
+  - Paleta ganhou seção "Componentes"; arrastar um para o canvas cria um nó `component-ref` com as props padrão do registry.
+  - Adicionar um novo componente da biblioteca = criar um wrapper estático + uma entrada no registry (não há scan dinâmico de pasta).
 - **Fase 4 — CMS + Animações**
   - Coleções de dados com binding de campos, Framer Motion no canvas.
 - **Fase 5 — Exportação dupla**
