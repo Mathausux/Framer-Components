@@ -1,7 +1,7 @@
 "use client";
 
 import { CSSProperties, useEffect, useState } from "react";
-import { Node } from "@/lib/schema";
+import { Animation, AnimationTrigger, AnimationType, Collection, Node } from "@/lib/schema";
 import { NODE_TYPE_LABELS } from "@/lib/nodeRenderer";
 import { EditablePropField, getComponentLibraryEntry } from "@/lib/componentLibrary";
 import { StyleEditor } from "./StyleEditor";
@@ -12,8 +12,12 @@ export interface InspectorProps {
   onChangeProps: (nodeId: string, props: Record<string, unknown>) => void;
   onChangeStyles: (nodeId: string, breakpointId: string, styles: Record<string, unknown>) => void;
   onChangeName: (nodeId: string, name: string) => void;
+  onChangeAnimations: (nodeId: string, animations: Animation[] | undefined) => void;
   onDelete: (nodeId: string) => void;
   activeBreakpointId: string;
+  collections: Record<string, Collection>;
+  /** Coleção do ancestral cms-collection mais próximo, se o nó selecionado estiver dentro de um template. */
+  activeCollection?: Collection;
 }
 
 export function Inspector({
@@ -22,8 +26,11 @@ export function Inspector({
   onChangeProps,
   onChangeStyles,
   onChangeName,
+  onChangeAnimations,
   onDelete,
   activeBreakpointId,
+  collections,
+  activeCollection,
 }: InspectorProps) {
   if (!node) {
     return <p style={{ fontSize: 13, color: "#999" }}>Selecione um bloco no canvas.</p>;
@@ -45,7 +52,11 @@ export function Inspector({
         </label>
       </div>
 
-      <PropsFields node={node} onChangeProps={onChangeProps} />
+      {node.type === "cms-collection" && (
+        <CollectionPicker node={node} collections={collections} onChangeProps={onChangeProps} />
+      )}
+
+      <PropsFields node={node} onChangeProps={onChangeProps} activeCollection={activeCollection} />
 
       <div>
         <h4 style={{ fontSize: 11, textTransform: "uppercase", color: "#999", margin: "0 0 8px" }}>
@@ -63,6 +74,8 @@ export function Inspector({
         activeBreakpointId={activeBreakpointId}
         onChangeStyles={onChangeStyles}
       />
+
+      <AnimationEditor node={node} onChangeAnimations={onChangeAnimations} />
 
       {!isRoot && (
         <button
@@ -83,39 +96,139 @@ export function Inspector({
   );
 }
 
-function PropsFields({
+function CollectionPicker({
   node,
+  collections,
   onChangeProps,
 }: {
   node: Node;
+  collections: Record<string, Collection>;
   onChangeProps: (nodeId: string, props: Record<string, unknown>) => void;
 }) {
   const props = node.props ?? {};
+  const ids = Object.keys(collections);
+
+  return (
+    <label style={fieldLabelStyle}>
+      Coleção vinculada
+      <select
+        style={fieldInputStyle}
+        value={(props.collectionId as string) ?? ""}
+        onChange={(e) =>
+          onChangeProps(node.id, { ...props, collectionId: e.target.value || undefined })
+        }
+      >
+        <option value="">(nenhuma)</option>
+        {ids.map((id) => (
+          <option key={id} value={id}>
+            {collections[id].name}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function BindingField({
+  node,
+  activeCollection,
+  fieldTypes,
+  onChangeProps,
+}: {
+  node: Node;
+  activeCollection: Collection;
+  fieldTypes: string[];
+  onChangeProps: (nodeId: string, props: Record<string, unknown>) => void;
+}) {
+  const props = node.props ?? {};
+  const binding = props.binding as { field?: string } | undefined;
+  const candidateFields = activeCollection.fields.filter((f) => fieldTypes.includes(f.type));
+
+  return (
+    <label style={fieldLabelStyle}>
+      Vincular a campo da coleção "{activeCollection.name}"
+      <select
+        style={fieldInputStyle}
+        value={binding?.field ?? ""}
+        onChange={(e) => {
+          const next = { ...props };
+          if (e.target.value) {
+            next.binding = { field: e.target.value };
+          } else {
+            delete next.binding;
+          }
+          onChangeProps(node.id, next);
+        }}
+      >
+        <option value="">(conteúdo fixo)</option>
+        {candidateFields.map((f) => (
+          <option key={f.id} value={f.id}>
+            {f.label ?? f.id}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function PropsFields({
+  node,
+  onChangeProps,
+  activeCollection,
+}: {
+  node: Node;
+  onChangeProps: (nodeId: string, props: Record<string, unknown>) => void;
+  activeCollection?: Collection;
+}) {
+  const props = node.props ?? {};
+  const isBound = Boolean((props.binding as { field?: string } | undefined)?.field);
 
   if (node.type === "text") {
     return (
-      <label style={fieldLabelStyle}>
-        Conteúdo
-        <textarea
-          style={{ ...fieldInputStyle, minHeight: 60 }}
-          value={(props.content as string) ?? ""}
-          onChange={(e) => onChangeProps(node.id, { ...props, content: e.target.value })}
-        />
-      </label>
+      <>
+        {activeCollection && (
+          <BindingField
+            node={node}
+            activeCollection={activeCollection}
+            fieldTypes={["text", "richText", "number", "date", "url"]}
+            onChangeProps={onChangeProps}
+          />
+        )}
+        {!isBound && (
+          <label style={fieldLabelStyle}>
+            Conteúdo
+            <textarea
+              style={{ ...fieldInputStyle, minHeight: 60 }}
+              value={(props.content as string) ?? ""}
+              onChange={(e) => onChangeProps(node.id, { ...props, content: e.target.value })}
+            />
+          </label>
+        )}
+      </>
     );
   }
 
   if (node.type === "image") {
     return (
       <>
-        <label style={fieldLabelStyle}>
-          URL da imagem
-          <input
-            style={fieldInputStyle}
-            value={(props.src as string) ?? ""}
-            onChange={(e) => onChangeProps(node.id, { ...props, src: e.target.value })}
+        {activeCollection && (
+          <BindingField
+            node={node}
+            activeCollection={activeCollection}
+            fieldTypes={["image", "url"]}
+            onChangeProps={onChangeProps}
           />
-        </label>
+        )}
+        {!isBound && (
+          <label style={fieldLabelStyle}>
+            URL da imagem
+            <input
+              style={fieldInputStyle}
+              value={(props.src as string) ?? ""}
+              onChange={(e) => onChangeProps(node.id, { ...props, src: e.target.value })}
+            />
+          </label>
+        )}
         <label style={fieldLabelStyle}>
           Texto alternativo
           <input
@@ -286,6 +399,116 @@ function ComponentPropField({
       />
     </label>
   );
+}
+
+const ANIMATION_TRIGGERS: [AnimationTrigger, string][] = [
+  ["onLoad", "Ao carregar"],
+  ["onScroll", "Ao rolar até aparecer"],
+  ["onHover", "Ao passar o mouse"],
+  ["onTap", "Ao clicar"],
+];
+
+const ANIMATION_TYPES: [AnimationType, string][] = [
+  ["fade", "Fade"],
+  ["slide", "Slide (de baixo pra cima)"],
+  ["scale", "Escala"],
+];
+
+/**
+ * Edita uma única animação por nó (para timelines com múltiplas animações,
+ * ver possível evolução futura). Reflete ao vivo no canvas via Framer Motion.
+ */
+function AnimationEditor({
+  node,
+  onChangeAnimations,
+}: {
+  node: Node;
+  onChangeAnimations: (nodeId: string, animations: Animation[] | undefined) => void;
+}) {
+  const animation = node.animations?.[0];
+
+  function update(patch: Partial<Animation>) {
+    const next: Animation = {
+      trigger: "onLoad",
+      type: "fade",
+      durationMs: 500,
+      delayMs: 0,
+      ...animation,
+      ...patch,
+    };
+    onChangeAnimations(node.id, [next]);
+  }
+
+  return (
+    <div>
+      <h4 style={{ fontSize: 11, textTransform: "uppercase", color: "#999", margin: "0 0 8px" }}>
+        Animação
+      </h4>
+      <label style={{ ...fieldLabelStyle, flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <input
+          type="checkbox"
+          checked={Boolean(animation)}
+          onChange={(e) => onChangeAnimations(node.id, e.target.checked ? [defaultAnimation()] : undefined)}
+        />
+        Ativar animação
+      </label>
+
+      {animation && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+          <label style={fieldLabelStyle}>
+            Disparo
+            <select
+              style={fieldInputStyle}
+              value={animation.trigger}
+              onChange={(e) => update({ trigger: e.target.value as AnimationTrigger })}
+            >
+              {ANIMATION_TRIGGERS.map(([v, l]) => (
+                <option key={v} value={v}>
+                  {l}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label style={fieldLabelStyle}>
+            Efeito
+            <select
+              style={fieldInputStyle}
+              value={animation.type}
+              onChange={(e) => update({ type: e.target.value as AnimationType })}
+            >
+              {ANIMATION_TYPES.map(([v, l]) => (
+                <option key={v} value={v}>
+                  {l}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label style={fieldLabelStyle}>
+            Duração (ms)
+            <input
+              type="number"
+              style={fieldInputStyle}
+              value={animation.durationMs ?? 500}
+              onChange={(e) => update({ durationMs: Number(e.target.value) })}
+            />
+          </label>
+          <label style={fieldLabelStyle}>
+            Atraso (ms)
+            <input
+              type="number"
+              style={fieldInputStyle}
+              value={animation.delayMs ?? 0}
+              onChange={(e) => update({ delayMs: Number(e.target.value) })}
+            />
+          </label>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function defaultAnimation(): Animation {
+  return { trigger: "onLoad", type: "fade", durationMs: 500, delayMs: 0 };
 }
 
 /**

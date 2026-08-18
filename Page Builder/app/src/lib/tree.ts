@@ -24,6 +24,20 @@ export function findParent(root: Node, childId: string): Node | null {
   return null;
 }
 
+/**
+ * Caminho da raiz até `id`, inclusive nos dois extremos. Retorna `null` se
+ * `id` não existir na árvore. Usado para descobrir se um nó está dentro do
+ * template de uma cms-collection (o ancestral mais próximo desse tipo).
+ */
+export function findAncestors(root: Node, id: string): Node[] | null {
+  if (root.id === id) return [root];
+  for (const child of root.children ?? []) {
+    const path = findAncestors(child, id);
+    if (path) return [root, ...path];
+  }
+  return null;
+}
+
 export function updateNode(root: Node, id: string, patch: Partial<Node>): Node {
   if (root.id === id) {
     return { ...root, ...patch };

@@ -24,14 +24,22 @@ Este diretório contém o app do editor. Consulte `../Sync/log.md` para o histó
 - Deixar um campo vazio remove a propriedade do breakpoint ativo (herda do breakpoint maior) em vez de gravar um valor vazio.
 - Editor JSON bruto continua disponível, colapsado atrás de "Avançado: editar estilos como JSON", para qualquer propriedade CSS ainda sem campo visual.
 
-## Fase 3 — Component Library ✅ (atual)
+## Fase 3 — Component Library ✅
 
 - Os componentes de `Framer Codes Component/` (ex: `AYVU/CMSGallerySlideshow`) renderizam **de verdade** dentro do canvas — não é um placeholder. Isso é possível graças a um shim do pacote `framer` (`src/lib/framerCanvasShim.ts`, só existe de verdade dentro do editor do Framer) e a um wrapper estático (`src/components/library/`) que reexporta o componente original.
 - `src/lib/componentLibrary.ts` é o registry: id, nome, empresa, descrição, props padrão e um subconjunto curado de props editáveis (equivalente ao `propertyControls` do Framer) para cada componente disponível.
 - A Paleta ganhou a seção "Componentes"; soltar um no canvas cria um nó `component-ref` com as props padrão do registry, editáveis no Inspector.
 - Para adicionar um novo componente: crie um wrapper estático em `src/components/library/` e uma entrada em `componentLibrary.ts` (não há varredura dinâmica da pasta — mantém a resolução de módulos do webpack simples e verificável).
 
-Fora de escopo nestas fases (fases futuras): múltiplas páginas na UI, reordenação fina (posição exata) de blocos, animações no canvas, CMS de verdade (coleções dinâmicas), exportação de código, deploy automático.
+## Fase 4 — CMS + Animações ✅ (atual)
+
+- **Coleções (CMS)**: botão "Coleções" no header do editor abre um modal (`CollectionsManager.tsx`) para criar coleções, adicionar campos tipados (texto, texto longo, número, booleano, data, imagem, link) e editar itens (linhas de dados) numa tabela.
+- Bloco "Coleção CMS" na Paleta: ao soltar no canvas, cria um nó `cms-collection` com um template padrão (frame + texto vinculado ao primeiro campo). Se o projeto ainda não tiver nenhuma coleção, uma é criada automaticamente com 2 itens de exemplo, pra já ver algo funcionando.
+- O template de uma `cms-collection` repete uma vez por item da coleção no canvas (só a primeira repetição é interativa/arrastável — as demais são um preview visual, já que compartilham o mesmo nó-template).
+- Nós texto/imagem dentro do template ganham, no Inspector, um seletor "Vincular a campo da coleção" — trocando conteúdo fixo por dado vindo da coleção.
+- **Animações**: uma animação por nó (`AnimationEditor` no Inspector — disparo onLoad/onScroll/onHover/onTap, efeito fade/slide/escala, duração e atraso), renderizada ao vivo no canvas via Framer Motion (`src/lib/motion.ts`), não é só metadado salvo.
+
+Fora de escopo nestas fases (fases futuras): múltiplas páginas na UI, reordenação fina (posição exata) de blocos, timeline com múltiplas animações por nó, exportação de código, deploy automático.
 
 ## Setup
 
@@ -73,15 +81,18 @@ Page Builder/
     │   │           ├── route.ts            # GET (listar) / POST (criar)
     │   │           └── [repo]/route.ts      # GET (ler) / PUT (salvar) project.json
     │   ├── components/
-    │   │   ├── Canvas.tsx      # renderiza a árvore e a seleção (drag-and-drop via DndContext do pai)
-    │   │   ├── Palette.tsx     # blocos arrastáveis (frame, texto, imagem, botão, componentes)
-    │   │   ├── Inspector.tsx   # edição de nome/props/estilos do bloco selecionado
-    │   │   ├── StyleEditor.tsx # campos visuais de estilo por breakpoint
-    │   │   └── library/        # wrappers estáticos dos componentes de Framer Codes Component/
+    │   │   ├── Canvas.tsx             # renderiza a árvore, seleção, repetição de cms-collection e animações
+    │   │   ├── Palette.tsx            # blocos arrastáveis (frame, texto, imagem, botão, coleção, componentes)
+    │   │   ├── Inspector.tsx          # edição de nome/props/estilos/animação/binding do bloco selecionado
+    │   │   ├── StyleEditor.tsx        # campos visuais de estilo por breakpoint
+    │   │   ├── CollectionsManager.tsx # modal para gerenciar coleções (CMS)
+    │   │   └── library/               # wrappers estáticos dos componentes de Framer Codes Component/
     │   └── lib/
     │       ├── schema.ts             # tipos TypeScript do modelo de dados
-    │       ├── tree.ts               # operações imutáveis sobre a árvore de nós
+    │       ├── tree.ts               # operações imutáveis sobre a árvore de nós (inclui findAncestors)
     │       ├── nodeRenderer.ts       # resolução de estilos por breakpoint + defaults visuais
+    │       ├── collections.ts        # operações imutáveis sobre coleções/campos/itens
+    │       ├── motion.ts             # config de Animation -> props do framer-motion
     │       ├── componentLibrary.ts   # registry dos componentes disponíveis na Paleta
     │       ├── framerCanvasShim.ts   # shim do pacote "framer" (addPropertyControls/ControlType)
     │       ├── store.ts              # escolhe o driver de storage (github ou local)
@@ -93,6 +104,6 @@ Page Builder/
     └── tsconfig.json
 ```
 
-## Próxima fase (Fase 4)
+## Próxima fase (Fase 5)
 
-CMS + Animações: coleções de dados com binding de campos (equivalente ao CMS do Framer) e uma timeline básica de animações (Framer Motion) no canvas.
+Exportação dupla: gerador de código React/Framer a partir do `project.json`, e gerador de site Next.js estático publicável (com deploy automático).

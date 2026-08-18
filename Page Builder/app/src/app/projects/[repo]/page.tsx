@@ -9,13 +9,23 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { Node, NodeType, PageBuilderProject } from "@/lib/schema";
-import { findNode, generateNodeId, insertNode, moveNode, removeNode, updateNode } from "@/lib/tree";
+import { Animation, Node, NodeType, PageBuilderProject } from "@/lib/schema";
+import {
+  findAncestors,
+  findNode,
+  generateNodeId,
+  insertNode,
+  moveNode,
+  removeNode,
+  updateNode,
+} from "@/lib/tree";
 import { DEFAULT_STYLES_BY_TYPE, NODE_TYPE_LABELS } from "@/lib/nodeRenderer";
 import { getComponentLibraryEntry } from "@/lib/componentLibrary";
+import { addField, addItem, createCollection, updateItemField } from "@/lib/collections";
 import { Canvas, DragData } from "@/components/Canvas";
 import { Palette } from "@/components/Palette";
 import { Inspector } from "@/components/Inspector";
+import { CollectionsManager } from "@/components/CollectionsManager";
 
 export default function ProjectEditorPage() {
   const params = useParams<{ repo: string }>();
@@ -28,6 +38,7 @@ export default function ProjectEditorPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeBreakpointId, setActiveBreakpointId] = useState("desktop");
+  const [collectionsModalOpen, setCollectionsModalOpen] = useState(false);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } })
   );
@@ -60,6 +71,13 @@ export default function ProjectEditorPage() {
   const root = page.root;
   const selectedNode = selectedId ? findNode(root, selectedId) : null;
 
+  const ancestorPath = selectedId ? findAncestors(root, selectedId) : null;
+  const ancestorCollectionNode = ancestorPath
+    ? [...ancestorPath].reverse().slice(1).find((n) => n.type === "cms-collection")
+    : undefined;
+  const activeCollectionId = ancestorCollectionNode?.props?.collectionId as string | undefined;
+  const activeCollection = activeCollectionId ? project.collections?.[activeCollectionId] : undefined;
+
   function updateRoot(nextRoot: Node) {
     setProject((prev) => {
       if (!prev) return prev;
@@ -69,6 +87,71 @@ export default function ProjectEditorPage() {
   }
 
   function handleDropPaletteItem(parentId: string, nodeType: NodeType, componentId?: string) {
+    if (!project) return;
+
+    if (nodeType === "cms-collection") {
+      let collections = project.collections ?? {};
+      let collectionId: string;
+
+      if (Object.keys(collections).length === 0) {
+        let starter = createCollection("Itens");
+        starter = addField(starter, "Descrição", "text");
+        const descFieldId = starter.fields[1].id;
+        starter = addItem(starter);
+        starter = updateItemField(starter, 0, "title", "Item 1");
+        starter = updateItemField(starter, 0, descFieldId, "Descrição do item 1");
+        starter = addItem(starter);
+        starter = updateItemField(starter, 1, "title", "Item 2");
+        starter = updateItemField(starter, 1, descFieldId, "Descrição do item 2");
+        collections = { ...collections, [starter.id]: starter };
+        collectionId = starter.id;
+      } else {
+        collectionId = Object.keys(collections)[0];
+      }
+
+      const collection = collections[collectionId];
+      const titleFieldId = collection.fields[0]?.id ?? "title";
+
+      const templateTextNode: Node = {
+        id: generateNodeId("text"),
+        type: "text",
+        name: "Campo",
+        props: { content: "", binding: { field: titleFieldId } },
+        styles: { desktop: { fontSize: 16, color: "#111111" } },
+      };
+      const templateFrame: Node = {
+        id: generateNodeId("frame"),
+        type: "frame",
+        name: "Item",
+        props: {},
+        styles: {
+          desktop: {
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+            padding: 12,
+            border: "1px solid #eee",
+            borderRadius: 6,
+          },
+        },
+        children: [templateTextNode],
+      };
+      const collectionNode: Node = {
+        id: generateNodeId("cms-collection"),
+        type: "cms-collection",
+        name: "Coleção CMS",
+        props: { collectionId },
+        styles: { desktop: DEFAULT_STYLES_BY_TYPE["cms-collection"] as Record<string, unknown> },
+        children: [templateFrame],
+      };
+
+      const nextRoot = insertNode(root, parentId, collectionNode);
+      const nextPages = project.pages.map((p, i) => (i === 0 ? { ...p, root: nextRoot } : p));
+      setProject({ ...project, collections, pages: nextPages });
+      setSelectedId(collectionNode.id);
+      return;
+    }
+
     const isContainer = nodeType === "frame";
     const libraryEntry = componentId ? getComponentLibraryEntry(componentId) : undefined;
 
@@ -127,6 +210,10 @@ export default function ProjectEditorPage() {
 
   function handleChangeName(nodeId: string, name: string) {
     updateRoot(updateNode(root, nodeId, { name }));
+  }
+
+  function handleChangeAnimations(nodeId: string, animations: Animation[] | undefined) {
+    updateRoot(updateNode(root, nodeId, { animations }));
   }
 
   function handleDelete(nodeId: string) {
@@ -193,20 +280,35 @@ export default function ProjectEditorPage() {
               ))}
             </div>
           </div>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            style={{
-              padding: "8px 16px",
-              background: "#111",
-              color: "#fff",
-              border: "none",
-              borderRadius: 6,
-              cursor: "pointer",
-            }}
-          >
-            {saving ? "Salvando…" : "Salvar"}
-          </button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              onClick={() => setCollectionsModalOpen(true)}
+              style={{
+                padding: "8px 16px",
+                background: "#fff",
+                color: "#333",
+                border: "1px solid #ddd",
+                borderRadius: 6,
+                cursor: "pointer",
+              }}
+            >
+              Coleções
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              style={{
+                padding: "8px 16px",
+                background: "#111",
+                color: "#fff",
+                border: "none",
+                borderRadius: 6,
+                cursor: "pointer",
+              }}
+            >
+              {saving ? "Salvando…" : "Salvar"}
+            </button>
+          </div>
         </header>
 
         <div style={{ flex: 1, overflow: "auto" }}>
@@ -216,6 +318,7 @@ export default function ProjectEditorPage() {
             activeBreakpointId={activeBreakpointId}
             selectedId={selectedId}
             onSelect={setSelectedId}
+            collections={project.collections ?? {}}
           />
         </div>
       </section>
@@ -227,11 +330,22 @@ export default function ProjectEditorPage() {
           onChangeProps={handleChangeProps}
           onChangeStyles={handleChangeStyles}
           onChangeName={handleChangeName}
+          onChangeAnimations={handleChangeAnimations}
           onDelete={handleDelete}
           activeBreakpointId={activeBreakpointId}
+          collections={project.collections ?? {}}
+          activeCollection={activeCollection}
         />
       </aside>
     </div>
+    {collectionsModalOpen && (
+      <CollectionsManager
+        collections={project.collections ?? {}}
+        onChange={(next) => setProject({ ...project, collections: next })}
+        onClose={() => setCollectionsModalOpen(false)}
+        initialSelectedId={activeCollectionId}
+      />
+    )}
     </DndContext>
   );
 }

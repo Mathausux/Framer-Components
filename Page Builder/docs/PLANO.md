@@ -43,8 +43,11 @@ Editor App (Next.js)
   - Registry (`componentLibrary.ts`) descreve cada componente disponível: id, nome, empresa, props padrão e um subconjunto curado de props editáveis no Inspector (equivalente aos `propertyControls` do Framer).
   - Paleta ganhou seção "Componentes"; arrastar um para o canvas cria um nó `component-ref` com as props padrão do registry.
   - Adicionar um novo componente da biblioteca = criar um wrapper estático + uma entrada no registry (não há scan dinâmico de pasta).
-- **Fase 4 — CMS + Animações**
-  - Coleções de dados com binding de campos, Framer Motion no canvas.
+- **Fase 4 — CMS + Animações** ✅ (`src/lib/collections.ts`, `src/components/CollectionsManager.tsx`, `src/lib/motion.ts`)
+  - Coleções de dados (CMS): modal "Coleções" para criar coleções, campos tipados (texto, número, booleano, data, imagem, link) e itens (linhas).
+  - Bloco "Coleção CMS" na paleta: ao soltar, cria um nó `cms-collection` com um template (frame + texto vinculado ao primeiro campo), auto-criando uma coleção inicial com 2 itens de exemplo se o projeto ainda não tiver nenhuma.
+  - O template repete uma vez por item da coleção no canvas; nós texto/imagem dentro do template podem ser vinculados a um campo da coleção pelo Inspector (em vez de conteúdo fixo).
+  - Animações: uma animação por nó (disparo onLoad/onScroll/onHover/onTap, efeito fade/slide/escala, duração/atraso), editável no Inspector e renderizada ao vivo no canvas via Framer Motion.
 - **Fase 5 — Exportação dupla**
   - Gerador de código React/Framer.
   - Gerador de site Next.js estático + deploy automático.

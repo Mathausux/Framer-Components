@@ -6,7 +6,7 @@ import { NODE_TYPE_LABELS } from "@/lib/nodeRenderer";
 import { COMPONENT_LIBRARY } from "@/lib/componentLibrary";
 import { DragData } from "./Canvas";
 
-const PALETTE_ITEMS: NodeType[] = ["frame", "text", "image", "button"];
+const PALETTE_ITEMS: NodeType[] = ["frame", "text", "image", "button", "cms-collection"];
 
 export function Palette() {
   return (
