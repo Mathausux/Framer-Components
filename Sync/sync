@@ -5,14 +5,15 @@ Ler este arquivo antes de qualquer acao neste repositorio.
 
 ## Estado
 - Projeto: Framer Components
-- Branch: claude/codex-main-communication-check-nmx2yc
+- Branch: claude/framer-like-page-builder-rxb5sq
 - Status: pronto para colaboracao Codex/Claude
-- Trabalho atual: nenhum
+- Trabalho atual: Page Builder (editor visual estilo Framer, projetos versionados no GitHub) em desenvolvimento por fases. Fase 0 (fundacao) concluida.
 - Bloqueios: nenhum
 
 ## Regras obrigatorias
 - Instalar skills somente quando o usuario declarar `skillinstall`.
 - Componentes Framer ficam em `Framer Codes Component/{EMPRESA}/`.
+- Codigo do Page Builder fica em `Page Builder/` (app Next.js em `Page Builder/app`, schema em `Page Builder/schema`, plano em `Page Builder/docs/PLANO.md`).
 - Para regras completas, ler `Sync/rules.md` somente quando a tarefa exigir.
 - Para historico, ler `Sync/log.md` somente quando precisar de contexto antigo.
 
@@ -20,3 +21,4 @@ Ler este arquivo antes de qualquer acao neste repositorio.
 - `Sync/`: coordenacao entre agentes.
 - `Skills/`: skills do repositorio.
 - `Framer Codes Component/`: componentes separados por empresa.
+- `Page Builder/`: editor visual estilo Framer, com projetos versionados no GitHub (em desenvolvimento por fases).

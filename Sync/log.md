@@ -21,7 +21,16 @@ Historico de sincronizacao entre Codex, Claude e outros agentes.
 | --- | --- | --- | --- |
 | Claude | Criar componente CMS Gallery Slideshow (conecta a Collection via seletor de campo Gallery) | `Framer Codes Component/AYVU/CMSGallerySlideshow.tsx`, `Sync/log.md` | concluido |
 
+## 2026-08-18
+
+| Agente | Tarefa | Arquivos | Status |
+| --- | --- | --- | --- |
+| Claude | Planejar Page Builder estilo Framer por fases (armazenamento em 1 repo GitHub por projeto) | conversa (planejamento) | concluido |
+| Claude | Fase 0 do Page Builder: schema JSON do projeto, esqueleto Next.js do editor, integracao GitHub (Octokit) para criar/ler/salvar project.json | `Page Builder/README.md`, `Page Builder/docs/PLANO.md`, `Page Builder/schema/project.schema.json`, `Page Builder/app/**` | concluido |
+
 ## Decisoes
+
+- `Page Builder/` concentra o editor visual estilo Framer, desenvolvido por fases (ver `Page Builder/docs/PLANO.md`). Cada projeto criado pelo editor vira um repositorio GitHub proprio.
 
 - `Sync/sync` deve permanecer leve para economizar contexto e creditos.
 - Regras completas ficam em `Sync/rules.md`.

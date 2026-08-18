@@ -1,0 +1,202 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/mathausux/framer-components/page-builder/project.schema.json",
+  "title": "PageBuilderProject",
+  "description": "Modelo de dados de um projeto do Page Builder. Fonte da verdade a partir da qual o canvas, a exportação de componentes React/Framer e a exportação de site estático são derivados.",
+  "type": "object",
+  "required": ["projectId", "name", "pages", "designTokens", "schemaVersion"],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "description": "Versão do schema, para permitir migrações futuras.",
+      "const": "0.1.0"
+    },
+    "projectId": {
+      "type": "string",
+      "description": "Identificador estável do projeto (slug), também usado como base do nome do repositório."
+    },
+    "name": {
+      "type": "string",
+      "description": "Nome amigável do projeto."
+    },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "breakpoints": {
+      "type": "array",
+      "description": "Lista ordenada (maior -> menor) de breakpoints disponíveis para o projeto.",
+      "items": { "$ref": "#/definitions/Breakpoint" },
+      "minItems": 1
+    },
+    "designTokens": { "$ref": "#/definitions/DesignTokens" },
+    "collections": {
+      "type": "object",
+      "description": "Coleções de dados (equivalente ao CMS do Framer), indexadas por collectionId.",
+      "additionalProperties": { "$ref": "#/definitions/Collection" }
+    },
+    "componentLibrary": {
+      "type": "array",
+      "description": "Referências a componentes reutilizáveis externos (ex: pasta 'Framer Codes Component' deste repositório).",
+      "items": { "$ref": "#/definitions/ComponentLibraryRef" }
+    },
+    "pages": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/Page" },
+      "minItems": 1
+    }
+  },
+  "definitions": {
+    "Breakpoint": {
+      "type": "object",
+      "required": ["id", "label", "maxWidth"],
+      "properties": {
+        "id": { "type": "string", "examples": ["desktop", "tablet", "mobile"] },
+        "label": { "type": "string" },
+        "maxWidth": {
+          "type": ["integer", "null"],
+          "description": "Largura máxima em px para este breakpoint se aplicar. null = sem limite (maior breakpoint)."
+        }
+      }
+    },
+    "DesignTokens": {
+      "type": "object",
+      "properties": {
+        "colors": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "spacing": {
+          "type": "object",
+          "additionalProperties": { "type": ["number", "string"] }
+        },
+        "typography": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "fontFamily": { "type": "string" },
+              "fontSize": { "type": ["number", "string"] },
+              "fontWeight": { "type": ["number", "string"] },
+              "lineHeight": { "type": ["number", "string"] }
+            }
+          }
+        }
+      }
+    },
+    "ComponentLibraryRef": {
+      "type": "object",
+      "required": ["id", "source"],
+      "properties": {
+        "id": { "type": "string", "description": "Ex: 'AYVU/CMSGallerySlideshow'." },
+        "source": {
+          "type": "string",
+          "enum": ["repo-local", "external-repo", "npm"],
+          "description": "De onde o componente vem."
+        },
+        "path": { "type": "string" },
+        "propsSchema": { "type": "object" }
+      }
+    },
+    "Collection": {
+      "type": "object",
+      "required": ["id", "name", "fields", "items"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "type"],
+            "properties": {
+              "id": { "type": "string" },
+              "type": {
+                "type": "string",
+                "enum": ["text", "richText", "number", "boolean", "date", "image", "gallery", "reference", "url"]
+              },
+              "label": { "type": "string" }
+            }
+          }
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "Page": {
+      "type": "object",
+      "required": ["id", "path", "root"],
+      "properties": {
+        "id": { "type": "string" },
+        "path": { "type": "string", "examples": ["/", "/sobre", "/blog/[slug]"] },
+        "title": { "type": "string" },
+        "seo": {
+          "type": "object",
+          "properties": {
+            "title": { "type": "string" },
+            "description": { "type": "string" },
+            "ogImage": { "type": "string" }
+          }
+        },
+        "root": { "$ref": "#/definitions/Node" }
+      }
+    },
+    "Node": {
+      "type": "object",
+      "description": "Nó genérico da árvore de UI. type determina como é renderizado/exportado.",
+      "required": ["id", "type"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": [
+            "frame",
+            "text",
+            "image",
+            "button",
+            "cms-collection",
+            "component-ref",
+            "form"
+          ]
+        },
+        "name": { "type": "string", "description": "Nome amigável exibido no painel de camadas." },
+        "props": {
+          "type": "object",
+          "description": "Props específicas do tipo de nó (ex: content para text, src para image, componentId para component-ref).",
+          "additionalProperties": true
+        },
+        "styles": {
+          "type": "object",
+          "description": "Estilos por breakpoint. Chave = breakpoint id, valor = objeto de estilo (CSS-like).",
+          "additionalProperties": { "type": "object", "additionalProperties": true }
+        },
+        "animations": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/Animation" }
+        },
+        "children": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/Node" }
+        }
+      }
+    },
+    "Animation": {
+      "type": "object",
+      "required": ["trigger", "type"],
+      "properties": {
+        "trigger": { "type": "string", "enum": ["onLoad", "onScroll", "onHover", "onTap"] },
+        "type": { "type": "string", "enum": ["fade", "slide", "scale", "custom"] },
+        "durationMs": { "type": "number" },
+        "delayMs": { "type": "number" },
+        "easing": { "type": "string" },
+        "custom": {
+          "type": "object",
+          "description": "Payload livre para animações custom (ex: variants do Framer Motion)."
+        }
+      }
+    }
+  }
+}
