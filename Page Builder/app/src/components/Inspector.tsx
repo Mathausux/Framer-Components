@@ -3,6 +3,7 @@
 import { CSSProperties, useEffect, useState } from "react";
 import { Node } from "@/lib/schema";
 import { NODE_TYPE_LABELS } from "@/lib/nodeRenderer";
+import { StyleEditor } from "./StyleEditor";
 
 export interface InspectorProps {
   node: Node | null;
@@ -45,7 +46,18 @@ export function Inspector({
 
       <PropsFields node={node} onChangeProps={onChangeProps} />
 
-      <StylesEditor
+      <div>
+        <h4 style={{ fontSize: 11, textTransform: "uppercase", color: "#999", margin: "0 0 8px" }}>
+          Estilos ({activeBreakpointId})
+        </h4>
+        <StyleEditor
+          nodeType={node.type}
+          styles={node.styles?.[activeBreakpointId] ?? {}}
+          onChange={(styles) => onChangeStyles(node.id, activeBreakpointId, styles)}
+        />
+      </div>
+
+      <AdvancedStylesEditor
         node={node}
         activeBreakpointId={activeBreakpointId}
         onChangeStyles={onChangeStyles}
@@ -131,7 +143,12 @@ function PropsFields({
   return null;
 }
 
-function StylesEditor({
+/**
+ * Escape hatch para propriedades CSS que o StyleEditor visual ainda não
+ * cobre (ex: boxShadow, border completo, transform). O StyleEditor é a via
+ * principal de edição; isto fica escondido atrás de um <details>.
+ */
+function AdvancedStylesEditor({
   node,
   activeBreakpointId,
   onChangeStyles,
@@ -160,16 +177,21 @@ function StylesEditor({
   }
 
   return (
-    <label style={fieldLabelStyle}>
-      Estilos ({activeBreakpointId}, JSON)
-      <textarea
-        style={{ ...fieldInputStyle, minHeight: 120, fontFamily: "monospace", fontSize: 12 }}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onBlur={handleBlur}
-      />
-      {error && <span style={{ color: "#c0392b", fontSize: 12 }}>{error}</span>}
-    </label>
+    <details>
+      <summary style={{ fontSize: 12, color: "#777", cursor: "pointer" }}>
+        Avançado: editar estilos como JSON
+      </summary>
+      <label style={{ ...fieldLabelStyle, marginTop: 8 }}>
+        Estilos ({activeBreakpointId}, JSON)
+        <textarea
+          style={{ ...fieldInputStyle, minHeight: 120, fontFamily: "monospace", fontSize: 12 }}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onBlur={handleBlur}
+        />
+        {error && <span style={{ color: "#c0392b", fontSize: 12 }}>{error}</span>}
+      </label>
+    </details>
   );
 }
 

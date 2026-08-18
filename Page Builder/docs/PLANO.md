@@ -34,8 +34,10 @@ Editor App (Next.js)
   - Inspector para editar nome, props e estilos (JSON) do bloco selecionado, com botão de excluir.
   - Troca de breakpoint ativo (desktop/tablet/mobile) com cascata de estilos.
   - Botão "Salvar" persiste via `PUT /api/projects/[repo]` (commit no GitHub).
-- **Fase 2 — Responsividade + estilos**
-  - Breakpoints (desktop/tablet/mobile), editor visual de estilos.
+- **Fase 2 — Responsividade + estilos** ✅ (`src/components/StyleEditor.tsx`)
+  - Editor visual de estilos por breakpoint no Inspector: layout (direção, alinhamento, espaço entre itens) para containers, espaçamento, dimensões, tipografia (para texto/botão) e aparência (cor de fundo, cantos arredondados).
+  - Campos vazios/"(herdado)" removem a propriedade do breakpoint ativo em vez de gravar um valor vazio.
+  - Editor JSON bruto mantido como escape hatch avançado (`<details>` colapsável) para propriedades CSS ainda não cobertas visualmente.
 - **Fase 3 — Component Library**
   - Integrar componentes de `Framer Codes Component/` como blocos arrastáveis.
 - **Fase 4 — CMS + Animações**
