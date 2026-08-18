@@ -31,7 +31,7 @@ Este diretório contém o app do editor. Consulte `../Sync/log.md` para o histó
 - A Paleta ganhou a seção "Componentes"; soltar um no canvas cria um nó `component-ref` com as props padrão do registry, editáveis no Inspector.
 - Para adicionar um novo componente: crie um wrapper estático em `src/components/library/` e uma entrada em `componentLibrary.ts` (não há varredura dinâmica da pasta — mantém a resolução de módulos do webpack simples e verificável).
 
-## Fase 4 — CMS + Animações ✅ (atual)
+## Fase 4 — CMS + Animações ✅
 
 - **Coleções (CMS)**: botão "Coleções" no header do editor abre um modal (`CollectionsManager.tsx`) para criar coleções, adicionar campos tipados (texto, texto longo, número, booleano, data, imagem, link) e editar itens (linhas de dados) numa tabela.
 - Bloco "Coleção CMS" na Paleta: ao soltar no canvas, cria um nó `cms-collection` com um template padrão (frame + texto vinculado ao primeiro campo). Se o projeto ainda não tiver nenhuma coleção, uma é criada automaticamente com 2 itens de exemplo, pra já ver algo funcionando.
@@ -39,7 +39,16 @@ Este diretório contém o app do editor. Consulte `../Sync/log.md` para o histó
 - Nós texto/imagem dentro do template ganham, no Inspector, um seletor "Vincular a campo da coleção" — trocando conteúdo fixo por dado vindo da coleção.
 - **Animações**: uma animação por nó (`AnimationEditor` no Inspector — disparo onLoad/onScroll/onHover/onTap, efeito fade/slide/escala, duração e atraso), renderizada ao vivo no canvas via Framer Motion (`src/lib/motion.ts`), não é só metadado salvo.
 
-Fora de escopo nestas fases (fases futuras): múltiplas páginas na UI, reordenação fina (posição exata) de blocos, timeline com múltiplas animações por nó, exportação de código, deploy automático.
+## Fase 5 — Exportação dupla ✅ (atual)
+
+- Botão "Exportar" no header do editor gera código a partir do `project.json` e commita no próprio repositório do projeto (salva o projeto primeiro, pra garantir que exporta o estado atual):
+  - `export/site/` — site Next.js completo e publicável: uma rota (App Router) por página, CSS Module por página com media queries por breakpoint, `package.json`/`next.config.mjs`/`tsconfig.json` prontos pra `npm install && npm run dev` ou deploy.
+  - `export/component/` — um `.tsx` autocontido por página, com estilos inline (só o breakpoint mais largo, já que um arquivo único não faz media query), pra colar como Custom Code Component no Framer ou importar em outro projeto React.
+- Animações viram `motion.div`/`motion.button` de verdade no código gerado (`src/lib/motion.ts` é reaproveitado tal qual do canvas). Itens de `cms-collection` são "desenrolados" em blocos JSX estáticos (um por item), não um `.map()` em runtime.
+- Testado gerando, buildando (`next build`) e rodando (`next start`) o site exportado de forma independente — funciona de verdade, não é só código de exemplo.
+- Limitação conhecida: componentes da biblioteca (`component-ref`) ainda não são copiados automaticamente — viram um comentário `{/* Componente ... */}` no lugar, indicando pra adicionar manualmente. Fica pra uma iteração futura.
+
+Fora de escopo nestas fases (fases futuras): múltiplas páginas na UI, reordenação fina (posição exata) de blocos, timeline com múltiplas animações por nó, exportação de componentes da biblioteca, autosave/deploy automático.
 
 ## Setup
 
@@ -93,9 +102,14 @@ Page Builder/
     │       ├── nodeRenderer.ts       # resolução de estilos por breakpoint + defaults visuais
     │       ├── collections.ts        # operações imutáveis sobre coleções/campos/itens
     │       ├── motion.ts             # config de Animation -> props do framer-motion
+    │       ├── codegen/
+    │       │   ├── css.ts              # CSS Module (com media queries) a partir dos estilos de um nó
+    │       │   ├── jsx.ts               # árvore de nós -> JSX (texto), modo css-module ou inline
+    │       │   ├── exportSite.ts        # monta o site Next.js completo (export/site)
+    │       │   └── exportComponent.ts   # monta os componentes de arquivo único (export/component)
     │       ├── componentLibrary.ts   # registry dos componentes disponíveis na Paleta
     │       ├── framerCanvasShim.ts   # shim do pacote "framer" (addPropertyControls/ControlType)
-    │       ├── store.ts              # escolhe o driver de storage (github ou local)
+    │       ├── store.ts              # escolhe o driver de storage (github ou local); inclui writeFiles
     │       ├── github.ts             # driver de storage via GitHub (Octokit)
     │       ├── localStore.ts         # driver de storage local em disco (dev/teste)
     │       └── projectTemplate.ts    # project.json inicial de um projeto novo
@@ -104,6 +118,6 @@ Page Builder/
     └── tsconfig.json
 ```
 
-## Próxima fase (Fase 5)
+## Próxima fase (Fase 6)
 
-Exportação dupla: gerador de código React/Framer a partir do `project.json`, e gerador de site Next.js estático publicável (com deploy automático).
+Persistência GitHub completa: autosave com debounce, histórico de versões navegável, botão de publicar (deploy do `export/site` na Vercel/Netlify) e preview deployments.

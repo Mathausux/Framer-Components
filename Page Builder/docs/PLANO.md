@@ -48,9 +48,13 @@ Editor App (Next.js)
   - Bloco "Coleção CMS" na paleta: ao soltar, cria um nó `cms-collection` com um template (frame + texto vinculado ao primeiro campo), auto-criando uma coleção inicial com 2 itens de exemplo se o projeto ainda não tiver nenhuma.
   - O template repete uma vez por item da coleção no canvas; nós texto/imagem dentro do template podem ser vinculados a um campo da coleção pelo Inspector (em vez de conteúdo fixo).
   - Animações: uma animação por nó (disparo onLoad/onScroll/onHover/onTap, efeito fade/slide/escala, duração/atraso), editável no Inspector e renderizada ao vivo no canvas via Framer Motion.
-- **Fase 5 — Exportação dupla**
-  - Gerador de código React/Framer.
-  - Gerador de site Next.js estático + deploy automático.
+- **Fase 5 — Exportação dupla** ✅ (`src/lib/codegen/{css,jsx,exportSite,exportComponent}.ts`)
+  - Botão "Exportar" no editor gera dois formatos a partir do `project.json` e commita no próprio repositório do projeto: `export/site/` (site Next.js completo, com CSS Module + media queries por breakpoint, pronto pra `npm install && npm run dev`/deploy) e `export/component/` (um `.tsx` por página, estilos inline, para colar como Custom Code Component no Framer ou importar em outro projeto React).
+  - Testado de ponta a ponta: o site exportado foi buildado e rodado de forma independente (`next build && next start`) e renderizou corretamente — inclusive animação (Framer Motion) e repetição estática dos itens de uma cms-collection.
+  - Limitação conhecida: componentes da biblioteca (`component-ref`, ex: `Framer Codes Component/AYVU/...`) ainda não são copiados automaticamente na exportação — viram um comentário no código indicando onde adicionar manualmente. Fica para uma iteração futura.
+  - "Exportar" salva o projeto primeiro (a exportação lê o `project.json` persistido, não o estado em memória do editor).
+- **Fase 6 — Persistência GitHub completa**
+  - Autosave com debounce, versionamento, botão publicar, preview deployments.
 - **Fase 6 — Persistência GitHub completa**
   - Autosave com debounce, versionamento, botão publicar, preview deployments.
 

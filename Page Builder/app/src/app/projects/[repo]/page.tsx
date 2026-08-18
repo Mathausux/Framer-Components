@@ -38,6 +38,8 @@ export default function ProjectEditorPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeBreakpointId, setActiveBreakpointId] = useState("desktop");
+  const [exporting, setExporting] = useState(false);
+  const [exportResult, setExportResult] = useState<string[] | null>(null);
   const [collectionsModalOpen, setCollectionsModalOpen] = useState(false);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } })
@@ -221,23 +223,48 @@ export default function ProjectEditorPage() {
     setSelectedId(root.id);
   }
 
+  /** Persiste o project.json atual. Retorna o novo sha, ou null se falhar. */
+  async function persistProject(): Promise<string | null> {
+    if (!project || !sha) return null;
+    const res = await fetch(`/api/projects/${repo}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ project, sha }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Erro ao salvar projeto.");
+    setSha(data.sha);
+    return data.sha;
+  }
+
   async function handleSave() {
-    if (!project || !sha) return;
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch(`/api/projects/${repo}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ project, sha }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Erro ao salvar projeto.");
-      setSha(data.sha);
+      await persistProject();
     } catch (err) {
       setError((err as Error).message);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleExport() {
+    setExporting(true);
+    setExportResult(null);
+    setError(null);
+    try {
+      // A exportação lê o project.json persistido, não o estado em memória —
+      // salva primeiro pra garantir que reflete o que está no canvas agora.
+      await persistProject();
+      const res = await fetch(`/api/projects/${repo}/export`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao exportar projeto.");
+      setExportResult(data.paths);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -295,6 +322,20 @@ export default function ProjectEditorPage() {
               Coleções
             </button>
             <button
+              onClick={handleExport}
+              disabled={exporting}
+              style={{
+                padding: "8px 16px",
+                background: "#fff",
+                color: "#333",
+                border: "1px solid #ddd",
+                borderRadius: 6,
+                cursor: "pointer",
+              }}
+            >
+              {exporting ? "Exportando…" : "Exportar"}
+            </button>
+            <button
               onClick={handleSave}
               disabled={saving}
               style={{
@@ -310,6 +351,32 @@ export default function ProjectEditorPage() {
             </button>
           </div>
         </header>
+
+        {exportResult && (
+          <div
+            style={{
+              background: "#eef7ee",
+              borderBottom: "1px solid #cde5cd",
+              padding: "8px 16px",
+              fontSize: 12,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 12,
+            }}
+          >
+            <span>
+              Exportado: {exportResult.length} arquivo(s) em <code>export/site</code> e{" "}
+              <code>export/component</code> no repositório do projeto.
+            </span>
+            <button
+              onClick={() => setExportResult(null)}
+              style={{ border: "none", background: "none", cursor: "pointer", color: "#555" }}
+            >
+              ×
+            </button>
+          </div>
+        )}
 
         <div style={{ flex: 1, overflow: "auto" }}>
           <Canvas

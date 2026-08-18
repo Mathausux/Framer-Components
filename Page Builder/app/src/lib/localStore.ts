@@ -90,3 +90,21 @@ export async function saveProject(
 
   return { sha: computeSha(nextRaw) };
 }
+
+export async function writeFiles(
+  projectId: string,
+  basePath: string,
+  files: Record<string, string>
+): Promise<{ paths: string[] }> {
+  const paths: string[] = [];
+
+  for (const [relPath, content] of Object.entries(files)) {
+    const fullRelPath = `${basePath}/${relPath}`;
+    const fullPath = path.join(STORAGE_DIR, projectId, fullRelPath);
+    await fs.mkdir(path.dirname(fullPath), { recursive: true });
+    await fs.writeFile(fullPath, content, "utf-8");
+    paths.push(fullRelPath);
+  }
+
+  return { paths };
+}

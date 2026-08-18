@@ -19,6 +19,15 @@ export interface ProjectStore {
     project: PageBuilderProject,
     sha: string
   ): Promise<{ sha: string }>;
+  /**
+   * Grava múltiplos arquivos de uma vez (ex: saída da exportação de
+   * Fase 5), cada um sob `basePath/<caminho>`. Retorna os caminhos escritos.
+   */
+  writeFiles(
+    projectId: string,
+    basePath: string,
+    files: Record<string, string>
+  ): Promise<{ paths: string[] }>;
 }
 
 /**
@@ -34,6 +43,7 @@ export function getStore(): ProjectStore {
       createProject: github.createProjectRepo,
       getProject: github.getProjectFile,
       saveProject: (id, project, sha) => github.saveProjectFile(id, project, sha),
+      writeFiles: github.writeFiles,
     };
   }
 
@@ -42,5 +52,6 @@ export function getStore(): ProjectStore {
     createProject: local.createProject,
     getProject: local.getProject,
     saveProject: local.saveProject,
+    writeFiles: local.writeFiles,
   };
 }

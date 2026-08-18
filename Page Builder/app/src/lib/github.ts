@@ -154,3 +154,43 @@ export async function saveProjectFile(
 
   return { sha: data.content.sha };
 }
+
+/**
+ * Grava múltiplos arquivos sob `basePath/` no repositório (usado pela
+ * exportação de Fase 5). Cada arquivo vira um commit separado via Contents
+ * API — simples e suficiente para o volume de arquivos de uma exportação,
+ * mas não é atômico entre arquivos (uma falha no meio deixa parte já
+ * commitada).
+ */
+export async function writeFiles(
+  repoName: string,
+  basePath: string,
+  files: Record<string, string>
+): Promise<{ paths: string[] }> {
+  const octokit = getOctokit();
+  const owner = getOwner();
+  const paths: string[] = [];
+
+  for (const [relPath, content] of Object.entries(files)) {
+    const fullPath = `${basePath}/${relPath}`;
+    let sha: string | undefined;
+    try {
+      const { data } = await octokit.repos.getContent({ owner, repo: repoName, path: fullPath });
+      if (!Array.isArray(data) && data.type === "file") sha = data.sha;
+    } catch {
+      // Arquivo ainda não existe — segue sem sha (cria em vez de atualizar).
+    }
+
+    await octokit.repos.createOrUpdateFileContents({
+      owner,
+      repo: repoName,
+      path: fullPath,
+      message: `chore: exportar ${fullPath}`,
+      content: Buffer.from(content, "utf-8").toString("base64"),
+      sha,
+    });
+    paths.push(fullPath);
+  }
+
+  return { paths };
+}
