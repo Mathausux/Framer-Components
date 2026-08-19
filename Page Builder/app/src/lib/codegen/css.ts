@@ -35,7 +35,8 @@ function declarationBlock(styles: Record<string, unknown>): string {
  */
 export function generatePageCss(root: Node, breakpoints: Breakpoint[]): string {
   const ordered = [...breakpoints].sort((a, b) => (b.maxWidth ?? Infinity) - (a.maxWidth ?? Infinity));
-  const chunks: string[] = [];
+  // width/height no canvas do editor incluem padding/borda (box-sizing: border-box) — mesma convenção aqui.
+  const chunks: string[] = ["*, *::before, *::after {\n  box-sizing: border-box;\n}"];
 
   function visit(node: Node) {
     const styles = node.styles ?? {};

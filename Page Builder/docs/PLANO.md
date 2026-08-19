@@ -59,6 +59,14 @@ Editor App (Next.js)
   - "Publicar": exporta o site atualizado e mostra um link real de "Deploy on Vercel" apontando pro repositório do projeto com `root-directory=export/site` — sem depender de credenciais de deploy. No modo local (sem GitHub), mostra aviso explicando por que não é possível.
   - Durante o teste, dois bugs reais corrigidos: rotas GET de versões precisavam de `export const dynamic = "force-dynamic"` (Next.js as trataria como estáticas/cacheadas por padrão); e qualquer erro de ação (salvar/exportar/publicar) derrubava a tela inteira do editor porque reusava o mesmo estado `error` do carregamento inicial — separado em `actionError` (banner dispensável) vs. erro de carregamento (tela cheia).
 
+- **Fase 7 — Canvas/UX do editor** ✅ (`src/components/Canvas.tsx`)
+  - Zoom/pan infinito no canvas: Ctrl/Cmd+scroll dá zoom centrado no cursor; espaço+arrastar (ou botão do meio) faz pan; controles de zoom fixos no canto do canvas.
+  - Resize por 8 handles nas bordas/cantos do bloco selecionado, escrevendo `width`/`height` no breakpoint ativo.
+  - Guias de alinhamento inteligentes durante o resize: a largura/altura gruda quando bate com a de um irmão ou o conteúdo do pai (layout é flexbox, então o snap é de dimensão, não de posição x/y como num canvas livre).
+  - Seleção múltipla: shift+clique e retângulo de seleção (arrastar a partir da área vazia do canvas); banner de exclusão em lote quando há mais de um bloco selecionado.
+  - Todos os blocos passaram a usar `box-sizing: border-box` (canvas e exportação) — corrige uma inconsistência real encontrada durante o teste: os candidatos de snap eram medidos pela caixa externa (`getBoundingClientRect`) enquanto `width` no estilo era o conteúdo interno (`content-box` padrão), o que fazia o snap ficar impreciso sempre que havia padding.
+  - Testado de ponta a ponta com Playwright: zoom (botões e Ctrl+scroll), resize com snap exato + linha guia visível durante o arraste, persistência via autosave, seleção múltipla (shift+clique e retângulo) com exclusão em lote persistida após reload.
+
 ## Mapeamento de recursos pagos do Framer → equivalente gratuito
 
 | Recurso Framer (pago) | Equivalente |

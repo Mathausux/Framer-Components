@@ -57,6 +57,15 @@ Este diretório contém o app do editor. Consulte `../Sync/log.md` para o histó
 
 Fora de escopo (não planejado): múltiplas páginas na UI, reordenação fina (posição exata) de blocos, timeline com múltiplas animações por nó, exportação de componentes da biblioteca, deploy automático de verdade (o "Publicar" gera o link, não dispara o deploy).
 
+## Fase 7 — Canvas/UX do editor ✅ (atual)
+
+- **Zoom/pan infinito**: scroll com Ctrl/Cmd dá zoom centrado no cursor; segurar espaço + arrastar (ou botão do meio do mouse) faz pan. Controles de zoom (−/100%/+) fixos no canto inferior direito do canvas; clicar no percentual reseta pra 100%.
+- **Resize por handles**: selecionar um bloco mostra 8 alças nas bordas/cantos; arrastar altera `width`/`height` do bloco no breakpoint ativo, refletindo em tempo real no campo de Dimensões do Inspector.
+- **Guias de alinhamento (smart guides)**: durante o resize, a largura/altura "gruda" (com tolerância de alguns pixels) quando bate com a largura/altura de um elemento irmão ou do conteúdo do pai, mostrando uma linha guia rosa. Como o layout é flexbox (não canvas livre), o snap é sobre dimensões, não posição x/y.
+- **Seleção múltipla**: shift+clique adiciona/remove um bloco da seleção; arrastar um retângulo a partir da área vazia (fora do artboard) seleciona todos os blocos que ele tocar. Com múltiplos selecionados, um banner no topo do canvas permite excluir todos de uma vez.
+- Todos os blocos passaram a usar `box-sizing: border-box` (no canvas e no código exportado) — `width`/`height` agora incluem padding/borda, resultado mais previsível e consistente com o resize por handles.
+- Testado de ponta a ponta com Playwright: zoom via botões e via Ctrl+scroll, resize com snap exato (valor grudando no candidato, linha guia visível durante o arraste), persistência via autosave+reload, seleção múltipla por shift+clique e por retângulo, exclusão em lote com persistência confirmada após reload.
+
 ## Setup
 
 ```bash
@@ -131,6 +140,6 @@ Page Builder/
     └── tsconfig.json
 ```
 
-## Todas as fases do plano original (0-6) estão concluídas
+## Todas as fases do plano original (0-6) + Fase 7 (Canvas/UX) estão concluídas
 
-Ideias para continuar (não planejadas formalmente): múltiplas páginas navegáveis na UI do editor, reordenação fina de blocos por posição exata, exportação automática dos componentes da biblioteca, timeline com múltiplas animações por nó, deploy automatizado de verdade (hoje "Publicar" gera o link, o clique final é do usuário).
+Ideias para continuar (não planejadas formalmente): múltiplas páginas navegáveis na UI do editor, reordenação fina de blocos por posição exata (drop numa posição específica entre irmãos), exportação automática dos componentes da biblioteca, timeline com múltiplas animações por nó, deploy automatizado de verdade (hoje "Publicar" gera o link, o clique final é do usuário).

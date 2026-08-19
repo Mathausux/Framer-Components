@@ -7,7 +7,7 @@ Ler este arquivo antes de qualquer acao neste repositorio.
 - Projeto: Framer Components
 - Branch: claude/framer-like-page-builder-rxb5sq
 - Status: pronto para colaboracao Codex/Claude
-- Trabalho atual: Page Builder (editor visual estilo Framer, projetos versionados no GitHub). Todas as fases do plano original (0-6) concluidas: fundacao, canvas MVP, estilos visuais, component library, CMS+animacoes, exportacao dupla site/componente, autosave+historico+publicar. PR aberto: https://github.com/Mathausux/Framer-Components/pull/3.
+- Trabalho atual: Page Builder (editor visual estilo Framer, projetos versionados no GitHub). Todas as fases do plano original (0-6) concluidas: fundacao, canvas MVP, estilos visuais, component library, CMS+animacoes, exportacao dupla site/componente, autosave+historico+publicar. Fase 7 (extra, canvas/UX) tambem concluida: zoom/pan infinito, resize por handles, guias de alinhamento inteligentes, selecao multipla. PR aberto: https://github.com/Mathausux/Framer-Components/pull/3.
 - Bloqueios: nenhum
 
 ## Regras obrigatorias

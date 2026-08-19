@@ -28,8 +28,10 @@ function styleAttr(ctx: JsxContext, node: Node): string {
   if (ctx.mode === "css-module") {
     return `className={styles["n-${cssIdent(node.id)}"]}`;
   }
-  const base = (node.styles?.[ctx.baseBreakpointId] as Record<string, unknown> | undefined) ?? {};
-  return Object.keys(base).length > 0 ? `style={${jsExpr(base)}}` : "";
+  const declared = (node.styles?.[ctx.baseBreakpointId] as Record<string, unknown> | undefined) ?? {};
+  // width/height no canvas do editor incluem padding/borda (box-sizing: border-box) — mesma convenção aqui.
+  const base = { boxSizing: "border-box", ...declared };
+  return `style={${jsExpr(base)}}`;
 }
 
 function motionAttrs(ctx: JsxContext, animation: Animation | undefined): string {

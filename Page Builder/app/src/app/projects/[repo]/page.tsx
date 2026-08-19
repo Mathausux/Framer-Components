@@ -40,7 +40,8 @@ export default function ProjectEditorPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  /** Seleção múltipla: o "primário" (selectedId, usado pelo Inspector/resize) é sempre o último id da lista. */
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [activeBreakpointId, setActiveBreakpointId] = useState("desktop");
   const [exporting, setExporting] = useState(false);
   const [exportResult, setExportResult] = useState<string[] | null>(null);
@@ -68,7 +69,7 @@ export default function ProjectEditorPage() {
         setProject(data.project);
         setSha(data.sha);
         setHtmlUrl(data.htmlUrl ?? "#");
-        setSelectedId(data.project.pages[0]?.root.id ?? null);
+        setSelectedIds(data.project.pages[0]?.root.id ? [data.project.pages[0].root.id] : []);
         skipNextAutosave.current = true;
       } catch (err) {
         setError((err as Error).message);
@@ -112,7 +113,30 @@ export default function ProjectEditorPage() {
 
   const page = project.pages[0];
   const root = page.root;
+  const selectedId = selectedIds.length > 0 ? selectedIds[selectedIds.length - 1] : null;
   const selectedNode = selectedId ? findNode(root, selectedId) : null;
+
+  function setSelectedId(id: string) {
+    setSelectedIds([id]);
+  }
+
+  function handleToggleSelect(id: string) {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
+  function handleMarqueeSelect(ids: string[]) {
+    if (ids.length > 0) setSelectedIds(ids);
+  }
+
+  function handleDeleteSelected() {
+    let nextRoot = root;
+    selectedIds.forEach((id) => {
+      if (id === root.id) return;
+      nextRoot = removeNode(nextRoot, id);
+    });
+    updateRoot(nextRoot);
+    setSelectedIds([]);
+  }
 
   const ancestorPath = selectedId ? findAncestors(root, selectedId) : null;
   const ancestorCollectionNode = ancestorPath
@@ -249,6 +273,17 @@ export default function ProjectEditorPage() {
     const node = findNode(root, nodeId);
     if (!node) return;
     updateRoot(updateNode(root, nodeId, { styles: { ...node.styles, [breakpointId]: styles } }));
+  }
+
+  function handleResizeNode(nodeId: string, width: number, height: number) {
+    const node = findNode(root, nodeId);
+    if (!node) return;
+    const currentStyles = (node.styles?.[activeBreakpointId] as Record<string, unknown>) ?? {};
+    updateRoot(
+      updateNode(root, nodeId, {
+        styles: { ...node.styles, [activeBreakpointId]: { ...currentStyles, width, height } },
+      })
+    );
   }
 
   function handleChangeName(nodeId: string, name: string) {
@@ -475,6 +510,36 @@ export default function ProjectEditorPage() {
           </div>
         </header>
 
+        {selectedIds.length > 1 && (
+          <div
+            style={{
+              background: "#eef4ff",
+              borderBottom: "1px solid #cddcf5",
+              padding: "8px 16px",
+              fontSize: 12,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 12,
+            }}
+          >
+            <span>{selectedIds.length} elementos selecionados (shift+clique pra ajustar, arraste na área vazia pra selecionar por retângulo)</span>
+            <button
+              onClick={handleDeleteSelected}
+              style={{
+                border: "1px solid #f5c6cb",
+                background: "#fdecea",
+                color: "#c0392b",
+                borderRadius: 4,
+                padding: "4px 10px",
+                cursor: "pointer",
+              }}
+            >
+              Excluir selecionados
+            </button>
+          </div>
+        )}
+
         {actionError && (
           <div
             style={{
@@ -554,14 +619,18 @@ export default function ProjectEditorPage() {
           </div>
         )}
 
-        <div style={{ flex: 1, overflow: "auto" }}>
+        <div style={{ flex: 1, overflow: "hidden" }}>
           <Canvas
             root={root}
             breakpoints={project.breakpoints}
             activeBreakpointId={activeBreakpointId}
             selectedId={selectedId}
+            selectedIds={selectedIds}
             onSelect={setSelectedId}
+            onToggleSelect={handleToggleSelect}
+            onSelectMultiple={handleMarqueeSelect}
             collections={project.collections ?? {}}
+            onResize={handleResizeNode}
           />
         </div>
       </section>
