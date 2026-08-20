@@ -62,6 +62,7 @@ Historico de sincronizacao entre Codex, Claude e outros agentes.
 | Claude | Corrigir modo "Tela cheia" do Scroll Mask: objectFit de "contain" para "cover", para o SVG preencher 100% da tela sem distorcer a forma (incluindo vazios/furos centrais), apenas recortando o excesso nas bordas | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
 | Claude | Adicionar prop "Quando anima" (durante o pin vs antes de travar, via offset do useScroll), "Padding da imagem" e "Largura max. imagem" ao Scroll Mask | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
 | Claude | Trocar Padding da imagem do Scroll Mask para ControlType.Padding nativo do Framer (4 lados + link); traduzir todos os titulos/descricoes dos property controls e o comentario JSDoc do componente para ingles | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
+| Claude | Adicionar prop "Lock Offset" (px) ao Scroll Mask: desloca o ponto de "totalmente travada" usado pelo useScroll (offset "start Npx" em vez de "start start"), controlando quantos pixels antes/depois do lock a animacao atinge seu limite, nos dois modos de Animation Timing | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
 
 ## Decisoes
 
