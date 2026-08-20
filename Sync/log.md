@@ -38,6 +38,7 @@ Historico de sincronizacao entre Codex, Claude e outros agentes.
 | Claude | Remover temporariamente o uso do SVG como mascara de recorte no Scroll Mask (imagem exibida por completo); SVG passa a ser elemento sticky proprio, sibling da secao da foto (nao mais aninhado), para o Z-Index do SVG (-1 a 10) competir com todo o projeto e nao ficar preso no contexto de empilhamento da secao | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
 | Claude | Ajustar Scroll Mask para efeito de intro com logo: logo visivel no tamanho inicial, zoom grande (tamanho final ate 2000) ao rolar, com fade de opacidade controlavel (prop "Inicio do fade") ate sumir e revelar a imagem de fundo por completo | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
 | Claude | Adicionar segunda animacao de zoom no Scroll Mask: alem do zoom da propria logo, a imagem de fundo tambem recebe um zoom sutil (prop "Zoom da imagem") em paralelo, reforcando a sensacao de entrar na cena | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
+| Claude | Adicionar prop "Modo do zoom" ao Scroll Mask: "Crescer" (comportamento atual, anima Tamanho inicial ate final) ou "Tela cheia" (SVG preenche a tela inteira desde o inicio e permanece ate o fim do scroll, sumindo so pelo fade) | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
 
 ## Decisoes
 
