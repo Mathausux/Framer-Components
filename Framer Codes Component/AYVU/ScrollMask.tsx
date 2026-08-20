@@ -85,71 +85,65 @@ export default function ScrollMask(props: ScrollMaskProps) {
                     top: stickyTopOffset,
                     width: "100%",
                     height: "100vh",
-                    overflow: "hidden",
-                    borderRadius,
                     background: backgroundColor,
                     zIndex,
                 }}
             >
-                <motion.div
+                <div
                     style={{
                         position: "absolute",
                         inset: 0,
-                        scale: imageScale,
-                        padding: imagePadding,
-                        boxSizing: "border-box",
-                        display: "flex",
-                        justifyContent: "center",
+                        overflow: "hidden",
+                        borderRadius,
                     }}
                 >
-                    {image?.src ? (
-                        <img
-                            src={image.src}
-                            alt={image.alt ?? ""}
-                            style={{
-                                width: "100%",
-                                height: "100%",
-                                maxWidth: imageMaxWidth > 0 ? imageMaxWidth : undefined,
-                                objectFit: imageFit,
-                                display: "block",
-                                pointerEvents: "none",
-                                userSelect: "none",
-                            }}
-                            draggable={false}
-                        />
-                    ) : (
-                        <div
-                            style={{
-                                width: "100%",
-                                height: "100%",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                color: "#8A8A8A",
-                                fontSize: 13,
-                                textAlign: "center",
-                                padding: 16,
-                            }}
-                        >
-                            Select an image in the properties panel.
-                        </div>
-                    )}
-                </motion.div>
+                    <motion.div
+                        style={{
+                            position: "absolute",
+                            inset: 0,
+                            scale: imageScale,
+                            padding: imagePadding,
+                            boxSizing: "border-box",
+                            display: "flex",
+                            justifyContent: "center",
+                        }}
+                    >
+                        {image?.src ? (
+                            <img
+                                src={image.src}
+                                alt={image.alt ?? ""}
+                                style={{
+                                    width: "100%",
+                                    height: "100%",
+                                    maxWidth: imageMaxWidth > 0 ? imageMaxWidth : undefined,
+                                    objectFit: imageFit,
+                                    display: "block",
+                                    pointerEvents: "none",
+                                    userSelect: "none",
+                                }}
+                                draggable={false}
+                            />
+                        ) : (
+                            <div
+                                style={{
+                                    width: "100%",
+                                    height: "100%",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    color: "#8A8A8A",
+                                    fontSize: 13,
+                                    textAlign: "center",
+                                    padding: 16,
+                                }}
+                            >
+                                Select an image in the properties panel.
+                            </div>
+                        )}
+                    </motion.div>
+                </div>
 
-            </div>
-
-            {shape && (
-                <div
-                    style={{
-                        position: "sticky",
-                        top: stickyTopOffset,
-                        marginTop: "-100vh",
-                        width: "100%",
-                        height: "100vh",
-                        zIndex: svgZIndex,
-                        pointerEvents: "none",
-                    }}
-                >
+                {shape && (
                     <motion.img
                         src={shape}
                         alt=""
@@ -162,6 +156,7 @@ export default function ScrollMask(props: ScrollMaskProps) {
                                       width: "100vw",
                                       height: "100vh",
                                       objectFit: "cover",
+                                      zIndex: svgZIndex,
                                       transform: "translate(-50%, -50%)",
                                       pointerEvents: "none",
                                       userSelect: "none",
@@ -173,6 +168,8 @@ export default function ScrollMask(props: ScrollMaskProps) {
                                       left: "50%",
                                       width: "calc(var(--p) * 1%)",
                                       height: "calc(var(--p) * 1%)",
+                                      objectFit: "contain",
+                                      zIndex: svgZIndex,
                                       transform: "translate(-50%, -50%)",
                                       pointerEvents: "none",
                                       userSelect: "none",
@@ -180,8 +177,8 @@ export default function ScrollMask(props: ScrollMaskProps) {
                         }
                         draggable={false}
                     />
-                </div>
-            )}
+                )}
+            </div>
         </div>
     )
 }
@@ -257,7 +254,7 @@ addPropertyControls(ScrollMask, {
         type: ControlType.Number,
         title: "SVG Z-Index",
         description:
-            "Stacking order of the SVG relative to every other element on the page (not just this component's image).",
+            "Stacking order of the SVG relative to the background image within this section. Positive = in front of the image, negative = behind it. Use \"Section Z-Index\" to control stacking against the rest of the page.",
         min: -1,
         max: 10,
         step: 1,
