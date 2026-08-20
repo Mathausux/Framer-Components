@@ -5,22 +5,21 @@ import { addPropertyControls, ControlType } from "framer"
 /**
  * Scroll Mask
  *
- * Efeito de intro com logo: a seção fica presa (sticky) no topo enquanto a
- * página rola por ela. Duas animações de zoom acontecem em paralelo:
- * (1) zoom DA logo — ela aparece visível no início e cresce muito conforme
- * o scroll avança; (2) zoom NA imagem de fundo — a cena por trás da logo
- * também dá um zoom sutil, reforçando a sensação de "entrar" na imagem. A
- * imagem de fundo nunca é recortada — fica sempre visível atrás da logo.
+ * Logo intro effect: the section sticks to the top while the page scrolls
+ * through it. Two zoom animations run in parallel: (1) the logo itself
+ * appears at its initial size and zooms in a lot as the scroll advances;
+ * (2) the background image also gets a subtle zoom, reinforcing the feeling
+ * of "entering" the image. The background image is never clipped — it stays
+ * fully visible behind the logo.
  *
- * A prop "Modo do zoom" escolhe como a logo se comporta: "Crescer" anima do
- * Tamanho inicial até o Tamanho final (100 = cobre a caixa do container;
- * valores bem acima de 100 estouram a tela); "Tela cheia" faz a logo
- * preencher a tela inteira desde o início e permanecer assim durante todo o
- * scroll.
+ * "Zoom Mode" controls how the logo behaves: "Grow" animates from Start Size
+ * to End Size (100 = covers the container box; values well above 100 make
+ * it burst past the screen); "Fullscreen" makes the logo fill the entire
+ * screen from the start and stay that way for the whole scroll.
  *
- * Importante: o componente cria sua própria altura de rolagem (prop
- * "Altura do scroll", em vh) — coloque-o em uma seção de página normal,
- * sem limitar a altura do frame no Framer, para o efeito de pin funcionar.
+ * Important: the component creates its own scroll height (prop "Scroll
+ * Height", in vh) — place it in a normal page section, without constraining
+ * the frame's height in Framer, for the pin effect to work.
  *
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
@@ -39,7 +38,7 @@ export default function ScrollMask(props: ScrollMaskProps) {
         revealStart = 0.1,
         revealEnd = 0.6,
         imageFit = "cover",
-        imagePadding = 0,
+        imagePadding = "0px 0px 0px 0px",
         imageMaxWidth = 0,
         borderRadius = 0,
         backgroundColor = "#0A0A0A",
@@ -130,7 +129,7 @@ export default function ScrollMask(props: ScrollMaskProps) {
                                 padding: 16,
                             }}
                         >
-                            Selecione uma imagem no painel de propriedades.
+                            Select an image in the properties panel.
                         </div>
                     )}
                 </motion.div>
@@ -201,7 +200,7 @@ interface ScrollMaskProps {
     revealStart: number
     revealEnd: number
     imageFit: "cover" | "contain" | "fill"
-    imagePadding: number
+    imagePadding: string
     imageMaxWidth: number
     borderRadius: number
     backgroundColor: string
@@ -214,38 +213,38 @@ interface ScrollMaskProps {
 addPropertyControls(ScrollMask, {
     image: {
         type: ControlType.ResponsiveImage,
-        title: "Imagem",
+        title: "Image",
     },
     shape: {
         type: ControlType.File,
         title: "Logo (SVG)",
         description:
-            "Logo exibida sobre a imagem de fundo. Aparece no tamanho inicial e dá zoom conforme o scroll.",
+            "Logo displayed over the background image. Appears at Start Size and zooms in as the page scrolls.",
         allowedFileTypes: ["svg"],
     },
     zoomMode: {
         type: ControlType.Enum,
-        title: "Modo do zoom",
+        title: "Zoom Mode",
         description:
-            "\"Crescer\" anima a logo do Tamanho inicial até o Tamanho final. \"Tela cheia\" faz a logo preencher a tela inteira desde o início e permanecer assim até o fim do scroll.",
+            "\"Grow\" animates the logo from Start Size to End Size. \"Fullscreen\" makes the logo fill the entire screen from the start and stay that way until the end of the scroll.",
         options: ["grow", "fullscreen"],
-        optionTitles: ["Crescer (zoom)", "Tela cheia"],
+        optionTitles: ["Grow (zoom)", "Fullscreen"],
         defaultValue: "grow",
     },
     animationTiming: {
         type: ControlType.Enum,
-        title: "Quando anima",
+        title: "Animation Timing",
         description:
-            "\"Durante o pin\" (padrão): a animação roda enquanto a seção está travada no topo. \"Antes de travar\": a animação termina de rodar enquanto a seção ainda está entrando na tela, e já fica no estado final quando trava.",
+            "\"During Pin\" (default): the animation runs while the section is stuck at the top. \"Before Pin\": the animation finishes while the section is still scrolling in, already at its final state by the time it locks.",
         options: ["duringPin", "beforePin"],
-        optionTitles: ["Durante o pin", "Antes de travar"],
+        optionTitles: ["During Pin", "Before Pin"],
         defaultValue: "duringPin",
     },
     svgZIndex: {
         type: ControlType.Number,
-        title: "Z-Index do SVG",
+        title: "SVG Z-Index",
         description:
-            "Ordem de empilhamento do SVG em relação a todos os outros elementos da página (não só a imagem deste componente).",
+            "Stacking order of the SVG relative to every other element on the page (not just this component's image).",
         min: -1,
         max: 10,
         step: 1,
@@ -253,9 +252,9 @@ addPropertyControls(ScrollMask, {
     },
     scrollHeight: {
         type: ControlType.Number,
-        title: "Altura do scroll",
+        title: "Scroll Height",
         description:
-            "Distância de rolagem (em vh) que a seção fica presa no topo enquanto a máscara se abre.",
+            "Scroll distance (in vh) the section stays pinned to the top while the mask animation plays.",
         min: 120,
         max: 500,
         step: 10,
@@ -263,8 +262,8 @@ addPropertyControls(ScrollMask, {
     },
     stickyTopOffset: {
         type: ControlType.Number,
-        title: "Offset do topo",
-        description: "Distância do topo onde a seção fica presa (px).",
+        title: "Top Offset",
+        description: "Distance from the top where the section sticks (px).",
         min: 0,
         max: 200,
         step: 1,
@@ -272,9 +271,9 @@ addPropertyControls(ScrollMask, {
     },
     zIndex: {
         type: ControlType.Number,
-        title: "Z-Index da seção",
+        title: "Section Z-Index",
         description:
-            "Ordem de empilhamento da seção presa (SVG + imagem) em relação a outros elementos da página.",
+            "Stacking order of the pinned section (SVG + image) relative to other elements on the page.",
         min: -100,
         max: 100,
         step: 1,
@@ -282,9 +281,9 @@ addPropertyControls(ScrollMask, {
     },
     startSize: {
         type: ControlType.Number,
-        title: "Tamanho inicial",
+        title: "Start Size",
         description:
-            "Tamanho da logo antes de rolar (100 = cobre a caixa do container). Use um valor visível, ex. 30.",
+            "Logo size before scrolling (100 = covers the container box). Use a visible value, e.g. 30.",
         min: 0,
         max: 150,
         step: 1,
@@ -293,9 +292,9 @@ addPropertyControls(ScrollMask, {
     },
     endSize: {
         type: ControlType.Number,
-        title: "Tamanho final",
+        title: "End Size",
         description:
-            "Tamanho da logo ao final do zoom. Use um valor bem alto (ex. 800) para um zoom grande.",
+            "Logo size at the end of the zoom. Use a very high value (e.g. 800) for a big zoom.",
         min: 0,
         max: 10000,
         step: 10,
@@ -304,9 +303,9 @@ addPropertyControls(ScrollMask, {
     },
     imageZoomEnd: {
         type: ControlType.Number,
-        title: "Zoom da imagem",
+        title: "Image Zoom",
         description:
-            "Escala da imagem de fundo ao fim da animação (1 = sem zoom). Cria o efeito de \"zoom na cena\" em paralelo ao zoom da logo.",
+            "Background image scale at the end of the animation (1 = no zoom). Creates a \"zoom into the scene\" effect alongside the logo zoom.",
         min: 1,
         max: 3,
         step: 0.05,
@@ -314,8 +313,8 @@ addPropertyControls(ScrollMask, {
     },
     revealStart: {
         type: ControlType.Number,
-        title: "Início da revelação",
-        description: "Ponto do scroll (0 a 1) em que a animação começa.",
+        title: "Reveal Start",
+        description: "Scroll point (0 to 1) where the animation starts.",
         min: 0,
         max: 1,
         step: 0.05,
@@ -323,8 +322,8 @@ addPropertyControls(ScrollMask, {
     },
     revealEnd: {
         type: ControlType.Number,
-        title: "Fim da revelação",
-        description: "Ponto do scroll (0 a 1) em que a animação termina.",
+        title: "Reveal End",
+        description: "Scroll point (0 to 1) where the animation ends.",
         min: 0,
         max: 1,
         step: 0.05,
@@ -332,25 +331,22 @@ addPropertyControls(ScrollMask, {
     },
     imageFit: {
         type: ControlType.Enum,
-        title: "Ajuste",
+        title: "Fit",
         options: ["cover", "contain", "fill"],
-        optionTitles: ["Cobrir", "Conter", "Preencher"],
+        optionTitles: ["Cover", "Contain", "Fill"],
         defaultValue: "cover",
     },
     imagePadding: {
-        type: ControlType.Number,
-        title: "Padding da imagem",
-        description: "Espaçamento interno (px) entre a imagem e a borda do container.",
-        min: 0,
-        max: 300,
-        step: 1,
-        defaultValue: 0,
+        type: ControlType.Padding,
+        title: "Image Padding",
+        description: "Inner spacing between the image and the container edge.",
+        defaultValue: "0px 0px 0px 0px",
     },
     imageMaxWidth: {
         type: ControlType.Number,
-        title: "Largura máx. imagem",
+        title: "Image Max Width",
         description:
-            "Largura máxima da imagem em px. Use 0 para não limitar (a imagem ocupa toda a largura disponível).",
+            "Maximum image width in px. Use 0 for no limit (the image fills the available width).",
         min: 0,
         max: 3000,
         step: 10,
@@ -358,14 +354,14 @@ addPropertyControls(ScrollMask, {
     },
     borderRadius: {
         type: ControlType.Number,
-        title: "Raio da borda",
+        title: "Border Radius",
         min: 0,
         max: 100,
         defaultValue: 0,
     },
     backgroundColor: {
         type: ControlType.Color,
-        title: "Fundo",
+        title: "Background",
         defaultValue: "#0A0A0A",
     },
 })
