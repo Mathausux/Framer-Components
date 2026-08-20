@@ -36,6 +36,7 @@ Historico de sincronizacao entre Codex, Claude e outros agentes.
 | Claude | Adicionar controle de Z-Index a secao sticky (SVG + imagem) do Scroll Mask | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
 | Claude | Renderizar o SVG do Scroll Mask como elemento visivel separado (nao so mascara invisivel) com Z-Index proprio, independente do Z-Index geral da secao | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
 | Claude | Remover temporariamente o uso do SVG como mascara de recorte no Scroll Mask (imagem exibida por completo); SVG passa a ser elemento sticky proprio, sibling da secao da foto (nao mais aninhado), para o Z-Index do SVG (-1 a 10) competir com todo o projeto e nao ficar preso no contexto de empilhamento da secao | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
+| Claude | Ajustar Scroll Mask para efeito de intro com logo: logo visivel no tamanho inicial, zoom grande (tamanho final ate 2000) ao rolar, com fade de opacidade controlavel (prop "Inicio do fade") ate sumir e revelar a imagem de fundo por completo | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
 
 ## Decisoes
 

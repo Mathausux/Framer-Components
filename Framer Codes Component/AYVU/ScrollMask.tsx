@@ -5,18 +5,16 @@ import { addPropertyControls, ControlType } from "framer"
 /**
  * Scroll Mask
  *
- * Efeito inspirado no "Scroll Mask" do React Bits Pro: a seção fica presa
- * (sticky) no topo enquanto a página rola por ela. A imagem é exibida por
- * completo (sem recorte) e, opcionalmente, um SVG importado é renderizado
- * por cima/por baixo dela, crescendo conforme o scroll avança.
+ * Efeito de intro com logo: a seção fica presa (sticky) no topo enquanto a
+ * página rola por ela. A logo (SVG) aparece visível no início; conforme o
+ * scroll avança, ela dá um zoom grande (cresce muito) e desaparece
+ * (fade out) ao final, revelando a imagem de fundo por completo. A imagem
+ * de fundo em si nunca é recortada — fica sempre visível atrás da logo.
  *
- * Nota: o uso do SVG como máscara de recorte da imagem foi removido
- * temporariamente — por enquanto o SVG é apenas um elemento visual que
- * cresce, sem recortar a imagem.
- *
- * O tamanho do SVG no início e no fim da animação é configurável (0 =
- * escondido, 100 = cobre a caixa do container; valores acima de 100 fazem
- * o SVG ultrapassar os limites do container).
+ * O tamanho da logo no início e no fim do zoom é configurável (100 = cobre
+ * a caixa do container; valores bem acima de 100 no "Tamanho final" criam
+ * o efeito de zoom estourando a tela). A opacidade da logo cai a zero entre
+ * "Início do fade" e o fim da animação.
  *
  * Importante: o componente cria sua própria altura de rolagem (prop
  * "Altura do scroll", em vh) — coloque-o em uma seção de página normal,
@@ -31,8 +29,9 @@ export default function ScrollMask(props: ScrollMaskProps) {
     const {
         image,
         shape,
-        startSize = 0,
-        endSize = 100,
+        startSize = 30,
+        endSize = 800,
+        fadeOutStart = 0.7,
         revealStart = 0.1,
         revealEnd = 0.6,
         imageFit = "cover",
@@ -59,6 +58,11 @@ export default function ScrollMask(props: ScrollMaskProps) {
     )
 
     const size = useTransform(revealProgress, [0, 1], [startSize, endSize])
+    const logoOpacity = useTransform(
+        revealProgress,
+        [0, Math.min(fadeOutStart, 0.99), 1],
+        [1, 1, 0]
+    )
 
     return (
         <div
@@ -139,6 +143,7 @@ export default function ScrollMask(props: ScrollMaskProps) {
                         alt=""
                         style={{
                             ["--p" as string]: size,
+                            opacity: logoOpacity,
                             position: "absolute",
                             top: "50%",
                             left: "50%",
@@ -166,6 +171,7 @@ interface ScrollMaskProps {
     shape?: string
     startSize: number
     endSize: number
+    fadeOutStart: number
     revealStart: number
     revealEnd: number
     imageFit: "cover" | "contain" | "fill"
@@ -184,9 +190,9 @@ addPropertyControls(ScrollMask, {
     },
     shape: {
         type: ControlType.File,
-        title: "Forma (SVG)",
+        title: "Logo (SVG)",
         description:
-            "SVG exibido por cima/por baixo da imagem, crescendo conforme o scroll (sem recortar a imagem por enquanto).",
+            "Logo exibida sobre a imagem de fundo. Aparece no tamanho inicial, dá zoom conforme o scroll e desaparece (fade) revelando a imagem por completo.",
         allowedFileTypes: ["svg"],
     },
     svgZIndex: {
@@ -232,21 +238,31 @@ addPropertyControls(ScrollMask, {
         type: ControlType.Number,
         title: "Tamanho inicial",
         description:
-            "Tamanho da forma no início da revelação (0 = escondida). Pode passar de 100 para começar já maior.",
+            "Tamanho da logo antes de rolar (100 = cobre a caixa do container). Use um valor visível, ex. 30.",
         min: 0,
         max: 150,
         step: 1,
-        defaultValue: 0,
+        defaultValue: 30,
     },
     endSize: {
         type: ControlType.Number,
         title: "Tamanho final",
         description:
-            "Tamanho do SVG no fim da animação (100 = cobre a caixa do container).",
+            "Tamanho da logo ao final do zoom. Use um valor bem alto (ex. 800) para um zoom grande.",
         min: 0,
-        max: 500,
-        step: 1,
-        defaultValue: 300,
+        max: 2000,
+        step: 10,
+        defaultValue: 800,
+    },
+    fadeOutStart: {
+        type: ControlType.Number,
+        title: "Início do fade",
+        description:
+            "Ponto da animação (0 a 1, relativo a Início/Fim da revelação) em que a logo começa a sumir (opacidade), até ficar totalmente transparente no fim do zoom e revelar a imagem de fundo por completo.",
+        min: 0,
+        max: 1,
+        step: 0.05,
+        defaultValue: 0.7,
     },
     revealStart: {
         type: ControlType.Number,
