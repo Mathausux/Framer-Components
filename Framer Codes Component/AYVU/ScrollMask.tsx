@@ -68,6 +68,7 @@ export default function ScrollMask(props: ScrollMaskProps) {
     )
 
     const size = useTransform(revealProgress, [0, 1], [startSize, endSize])
+    const sizePercent = useTransform(size, (value) => `${value}%`)
     const imageScale = useTransform(revealProgress, [0, 1], [1, imageZoomEnd])
 
     return (
@@ -162,12 +163,11 @@ export default function ScrollMask(props: ScrollMaskProps) {
                                       userSelect: "none",
                                   }
                                 : {
-                                      ["--p" as string]: size,
                                       position: "absolute",
                                       top: "50%",
                                       left: "50%",
-                                      width: "calc(var(--p) * 1%)",
-                                      height: "calc(var(--p) * 1%)",
+                                      width: sizePercent,
+                                      height: sizePercent,
                                       objectFit: "contain",
                                       zIndex: svgZIndex,
                                       transform: "translate(-50%, -50%)",
