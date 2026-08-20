@@ -1,4 +1,4 @@
-import { useRef } from "react"
+import { useRef, type RefObject } from "react"
 import { motion, useScroll, useTransform } from "framer-motion"
 import { addPropertyControls, ControlType } from "framer"
 
@@ -21,6 +21,11 @@ import { addPropertyControls, ControlType } from "framer"
  * Height", in vh) — place it in a normal page section, without constraining
  * the frame's height in Framer, for the pin effect to work.
  *
+ * By default, the animation's scroll progress is driven by this
+ * component's own section. Set "Scroll Trigger" to another layer on the
+ * page to drive it from that layer's scroll position instead (e.g. to
+ * start the animation earlier or later than where this component sits).
+ *
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  * @framerIntrinsicWidth 600
@@ -30,6 +35,7 @@ export default function ScrollMask(props: ScrollMaskProps) {
     const {
         image,
         shape,
+        scrollTarget,
         zoomMode = "grow",
         animationTiming = "duringPin",
         lockOffset = 0,
@@ -54,7 +60,7 @@ export default function ScrollMask(props: ScrollMaskProps) {
     const lockPoint = lockOffset > 0 ? (`start ${lockOffset}px` as const) : "start start"
 
     const { scrollYProgress } = useScroll({
-        target: wrapperRef,
+        target: scrollTarget?.current ? scrollTarget : wrapperRef,
         offset: (animationTiming === "beforePin"
             ? ["start end", lockPoint]
             : [lockPoint, "end end"]) as any,
@@ -191,6 +197,7 @@ interface ScrollMaskImage {
 interface ScrollMaskProps {
     image?: ScrollMaskImage
     shape?: string
+    scrollTarget?: RefObject<HTMLElement>
     zoomMode: "grow" | "fullscreen"
     animationTiming: "duringPin" | "beforePin"
     lockOffset: number
@@ -221,6 +228,12 @@ addPropertyControls(ScrollMask, {
         description:
             "Logo displayed over the background image. Appears at Start Size and zooms in as the page scrolls.",
         allowedFileTypes: ["svg"],
+    },
+    scrollTarget: {
+        type: ControlType.ComponentInstance,
+        title: "Scroll Trigger",
+        description:
+            "Optional: pick another layer/section on the page to drive the animation's scroll progress instead of this component's own section. Useful when the animation should start earlier or later than where this component sits.",
     },
     zoomMode: {
         type: ControlType.Enum,
