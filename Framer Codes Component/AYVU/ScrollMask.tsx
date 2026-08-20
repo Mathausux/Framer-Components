@@ -5,15 +5,21 @@ import { addPropertyControls, ControlType } from "framer"
 /**
  * Scroll Mask
  *
- * Efeito inspirado no "Scroll Mask" do React Bits Pro: conforme a página
- * rola, uma máscara se abre e revela a imagem. Seis formas de abertura
- * disponíveis: círculo, losango, cortina horizontal, cortina vertical,
- * diagonal e persianas.
+ * Efeito inspirado no "Scroll Mask" do React Bits Pro: a seção fica presa
+ * (sticky) no topo enquanto a página rola por ela; conforme o scroll avança,
+ * uma máscara se abre e revela a imagem. Ao final do trecho de rolagem, a
+ * imagem fica totalmente revelada e a seção se solta. Seis formas de
+ * abertura disponíveis: círculo, losango, cortina horizontal, cortina
+ * vertical, diagonal e persianas.
+ *
+ * Importante: o componente cria sua própria altura de rolagem (prop
+ * "Altura do scroll", em vh) — coloque-o em uma seção de página normal,
+ * sem limitar a altura do frame no Framer, para o efeito de pin funcionar.
  *
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  * @framerIntrinsicWidth 600
- * @framerIntrinsicHeight 500
+ * @framerIntrinsicHeight 1200
  */
 export default function ScrollMask(props: ScrollMaskProps) {
     const {
@@ -25,13 +31,15 @@ export default function ScrollMask(props: ScrollMaskProps) {
         imageFit = "cover",
         borderRadius = 0,
         backgroundColor = "#0A0A0A",
+        scrollHeight = 250,
+        stickyTopOffset = 0,
     } = props
 
-    const containerRef = useRef<HTMLDivElement>(null)
+    const wrapperRef = useRef<HTMLDivElement>(null)
 
     const { scrollYProgress } = useScroll({
-        target: containerRef,
-        offset: ["start end", "end start"],
+        target: wrapperRef,
+        offset: ["start start", "end end"],
     })
 
     const progress = useTransform(
@@ -47,62 +55,71 @@ export default function ScrollMask(props: ScrollMaskProps) {
 
     return (
         <div
-            ref={containerRef}
+            ref={wrapperRef}
             style={{
                 position: "relative",
                 width: "100%",
-                height: "100%",
-                overflow: "hidden",
-                borderRadius,
-                background: backgroundColor,
+                height: `${scrollHeight}vh`,
             }}
         >
-            <motion.div
+            <div
                 style={{
-                    ["--p" as string]: progress,
-                    position: "absolute",
-                    inset: 0,
-                    clipPath: usesMask ? undefined : clipPath,
-                    WebkitMaskImage: usesMask
-                        ? `repeating-linear-gradient(90deg, black 0, black calc(var(--p) * ${stripe}%), transparent calc(var(--p) * ${stripe}%), transparent ${stripe}%)`
-                        : undefined,
-                    maskImage: usesMask
-                        ? `repeating-linear-gradient(90deg, black 0, black calc(var(--p) * ${stripe}%), transparent calc(var(--p) * ${stripe}%), transparent ${stripe}%)`
-                        : undefined,
+                    position: "sticky",
+                    top: stickyTopOffset,
+                    width: "100%",
+                    height: "100vh",
+                    overflow: "hidden",
+                    borderRadius,
+                    background: backgroundColor,
                 }}
             >
-                {image?.src ? (
-                    <img
-                        src={image.src}
-                        alt={image.alt ?? ""}
-                        style={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: imageFit,
-                            display: "block",
-                            pointerEvents: "none",
-                            userSelect: "none",
-                        }}
-                        draggable={false}
-                    />
-                ) : (
-                    <div
-                        style={{
-                            width: "100%",
-                            height: "100%",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            color: "#8A8A8A",
-                            fontSize: 13,
-                            textAlign: "center",
-                            padding: 16,
-                        }}
-                    >
-                        Selecione uma imagem no painel de propriedades.
-                    </div>
-                )}
-            </motion.div>
+                <motion.div
+                    style={{
+                        ["--p" as string]: progress,
+                        position: "absolute",
+                        inset: 0,
+                        clipPath: usesMask ? undefined : clipPath,
+                        WebkitMaskImage: usesMask
+                            ? `repeating-linear-gradient(90deg, black 0, black calc(var(--p) * ${stripe}%), transparent calc(var(--p) * ${stripe}%), transparent ${stripe}%)`
+                            : undefined,
+                        maskImage: usesMask
+                            ? `repeating-linear-gradient(90deg, black 0, black calc(var(--p) * ${stripe}%), transparent calc(var(--p) * ${stripe}%), transparent ${stripe}%)`
+                            : undefined,
+                    }}
+                >
+                    {image?.src ? (
+                        <img
+                            src={image.src}
+                            alt={image.alt ?? ""}
+                            style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: imageFit,
+                                display: "block",
+                                pointerEvents: "none",
+                                userSelect: "none",
+                            }}
+                            draggable={false}
+                        />
+                    ) : (
+                        <div
+                            style={{
+                                width: "100%",
+                                height: "100%",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                color: "#8A8A8A",
+                                fontSize: 13,
+                                textAlign: "center",
+                                padding: 16,
+                            }}
+                        >
+                            Selecione uma imagem no painel de propriedades.
+                        </div>
+                    )}
+                </motion.div>
+            </div>
         </div>
     )
 }
@@ -144,12 +161,33 @@ interface ScrollMaskProps {
     imageFit: "cover" | "contain" | "fill"
     borderRadius: number
     backgroundColor: string
+    scrollHeight: number
+    stickyTopOffset: number
 }
 
 addPropertyControls(ScrollMask, {
     image: {
         type: ControlType.ResponsiveImage,
         title: "Imagem",
+    },
+    scrollHeight: {
+        type: ControlType.Number,
+        title: "Altura do scroll",
+        description:
+            "Distância de rolagem (em vh) que a seção fica presa no topo enquanto a máscara se abre.",
+        min: 120,
+        max: 500,
+        step: 10,
+        defaultValue: 250,
+    },
+    stickyTopOffset: {
+        type: ControlType.Number,
+        title: "Offset do topo",
+        description: "Distância do topo onde a seção fica presa (px).",
+        min: 0,
+        max: 200,
+        step: 1,
+        defaultValue: 0,
     },
     variant: {
         type: ControlType.Enum,
