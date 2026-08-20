@@ -26,6 +26,8 @@ Historico de sincronizacao entre Codex, Claude e outros agentes.
 | Agente | Tarefa | Arquivos | Status |
 | --- | --- | --- | --- |
 | Claude | Criar componente Scroll Mask (efeito inspirado em reactbits.dev/scroll-mask, máscara de degradê nas bordas que some no início/fim do scroll) | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
+| Claude | Registrar regra de merge automatico de PRs concluidas | `Sync/rules.md`, `Sync/sync` | concluido |
+| Claude | Corrigir Scroll Mask para o efeito real do React Bits Pro (rolagem abre mascara revelando imagem em 6 formatos: circulo, losango, cortina horizontal/vertical, diagonal, persianas) via framer-motion useScroll | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
 
 ## Decisoes
 
