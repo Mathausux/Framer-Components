@@ -21,6 +21,12 @@ Historico de sincronizacao entre Codex, Claude e outros agentes.
 | --- | --- | --- | --- |
 | Claude | Criar componente CMS Gallery Slideshow (conecta a Collection via seletor de campo Gallery) | `Framer Codes Component/AYVU/CMSGallerySlideshow.tsx`, `Sync/log.md` | concluido |
 
+## 2026-08-20
+
+| Agente | Tarefa | Arquivos | Status |
+| --- | --- | --- | --- |
+| Claude | Criar componente Scroll Mask (efeito inspirado em reactbits.dev/scroll-mask, máscara de degradê nas bordas que some no início/fim do scroll) | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
+
 ## Decisoes
 
 - `Sync/sync` deve permanecer leve para economizar contexto e creditos.
