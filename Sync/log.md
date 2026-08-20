@@ -35,6 +35,7 @@ Historico de sincronizacao entre Codex, Claude e outros agentes.
 | Claude | Corrigir prop "Forma (SVG)" do Scroll Mask de ControlType.Image (reprocessa/otimiza imagem, corrompe SVG bruto) para ControlType.File com allowedFileTypes svg (URL do arquivo original) | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
 | Claude | Adicionar controle de Z-Index a secao sticky (SVG + imagem) do Scroll Mask | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
 | Claude | Renderizar o SVG do Scroll Mask como elemento visivel separado (nao so mascara invisivel) com Z-Index proprio, independente do Z-Index geral da secao | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
+| Claude | Remover temporariamente o uso do SVG como mascara de recorte no Scroll Mask (imagem exibida por completo); SVG passa a ser elemento sticky proprio, sibling da secao da foto (nao mais aninhado), para o Z-Index do SVG (-1 a 10) competir com todo o projeto e nao ficar preso no contexto de empilhamento da secao | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
 
 ## Decisoes
 

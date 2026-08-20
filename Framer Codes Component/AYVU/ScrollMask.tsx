@@ -6,16 +6,17 @@ import { addPropertyControls, ControlType } from "framer"
  * Scroll Mask
  *
  * Efeito inspirado no "Scroll Mask" do React Bits Pro: a seção fica presa
- * (sticky) no topo enquanto a página rola por ela; conforme o scroll avança,
- * uma máscara em forma de SVG importado se abre e revela a imagem. Ao final
- * do trecho de rolagem, a imagem fica totalmente revelada e a seção se
- * solta.
+ * (sticky) no topo enquanto a página rola por ela. A imagem é exibida por
+ * completo (sem recorte) e, opcionalmente, um SVG importado é renderizado
+ * por cima/por baixo dela, crescendo conforme o scroll avança.
  *
- * O tamanho da forma no início e no fim da revelação é configurável
- * (0 = totalmente escondida, 100 = o SVG cobre a caixa do container).
- * Para que a imagem apareça por completo ao final, sem a silhueta do SVG
- * visível, o tamanho final deve ultrapassar bastante os limites do
- * container (padrão: 300).
+ * Nota: o uso do SVG como máscara de recorte da imagem foi removido
+ * temporariamente — por enquanto o SVG é apenas um elemento visual que
+ * cresce, sem recortar a imagem.
+ *
+ * O tamanho do SVG no início e no fim da animação é configurável (0 =
+ * escondido, 100 = cobre a caixa do container; valores acima de 100 fazem
+ * o SVG ultrapassar os limites do container).
  *
  * Importante: o componente cria sua própria altura de rolagem (prop
  * "Altura do scroll", em vh) — coloque-o em uma seção de página normal,
@@ -59,8 +60,6 @@ export default function ScrollMask(props: ScrollMaskProps) {
 
     const size = useTransform(revealProgress, [0, 1], [startSize, endSize])
 
-    const maskImageValue = shape ? `url(${shape})` : undefined
-
     return (
         <div
             ref={wrapperRef}
@@ -82,19 +81,10 @@ export default function ScrollMask(props: ScrollMaskProps) {
                     zIndex,
                 }}
             >
-                <motion.div
+                <div
                     style={{
-                        ["--p" as string]: size,
                         position: "absolute",
                         inset: 0,
-                        WebkitMaskImage: maskImageValue,
-                        maskImage: maskImageValue,
-                        WebkitMaskRepeat: "no-repeat",
-                        maskRepeat: "no-repeat",
-                        WebkitMaskPosition: "center",
-                        maskPosition: "center",
-                        WebkitMaskSize: "calc(var(--p) * 1%) calc(var(--p) * 1%)",
-                        maskSize: "calc(var(--p) * 1%) calc(var(--p) * 1%)",
                     }}
                 >
                     {image?.src ? (
@@ -128,9 +118,22 @@ export default function ScrollMask(props: ScrollMaskProps) {
                             Selecione uma imagem no painel de propriedades.
                         </div>
                     )}
-                </motion.div>
+                </div>
 
-                {shape && (
+            </div>
+
+            {shape && (
+                <div
+                    style={{
+                        position: "sticky",
+                        top: stickyTopOffset,
+                        marginTop: "-100vh",
+                        width: "100%",
+                        height: "100vh",
+                        zIndex: svgZIndex,
+                        pointerEvents: "none",
+                    }}
+                >
                     <motion.img
                         src={shape}
                         alt=""
@@ -142,14 +145,13 @@ export default function ScrollMask(props: ScrollMaskProps) {
                             width: "calc(var(--p) * 1%)",
                             height: "calc(var(--p) * 1%)",
                             transform: "translate(-50%, -50%)",
-                            zIndex: svgZIndex,
                             pointerEvents: "none",
                             userSelect: "none",
                         }}
                         draggable={false}
                     />
-                )}
-            </div>
+                </div>
+            )}
         </div>
     )
 }
@@ -184,16 +186,16 @@ addPropertyControls(ScrollMask, {
         type: ControlType.File,
         title: "Forma (SVG)",
         description:
-            "SVG usado como máscara. Áreas preenchidas (opacas) do SVG revelam a imagem; áreas transparentes escondem.",
+            "SVG exibido por cima/por baixo da imagem, crescendo conforme o scroll (sem recortar a imagem por enquanto).",
         allowedFileTypes: ["svg"],
     },
     svgZIndex: {
         type: ControlType.Number,
         title: "Z-Index do SVG",
         description:
-            "Ordem de empilhamento do SVG (renderizado como elemento visível) em relação à imagem revelada. Positivo = na frente, negativo = atrás.",
-        min: -100,
-        max: 100,
+            "Ordem de empilhamento do SVG em relação a todos os outros elementos da página (não só a imagem deste componente).",
+        min: -1,
+        max: 10,
         step: 1,
         defaultValue: 1,
     },
@@ -240,7 +242,7 @@ addPropertyControls(ScrollMask, {
         type: ControlType.Number,
         title: "Tamanho final",
         description:
-            "Tamanho da forma no fim da revelação. Use um valor bem acima de 100 para que a forma ultrapasse os limites do container e a imagem apareça por completo, sem silhueta do SVG.",
+            "Tamanho do SVG no fim da animação (100 = cobre a caixa do container).",
         min: 0,
         max: 500,
         step: 1,
