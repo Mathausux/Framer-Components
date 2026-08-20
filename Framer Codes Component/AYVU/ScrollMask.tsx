@@ -8,17 +8,15 @@ import { addPropertyControls, ControlType } from "framer"
  * Efeito de intro com logo: a seção fica presa (sticky) no topo enquanto a
  * página rola por ela. Duas animações de zoom acontecem em paralelo:
  * (1) zoom DA logo — ela aparece visível no início e cresce muito conforme
- * o scroll avança, desaparecendo (fade out) ao final; (2) zoom NA imagem
- * de fundo — a cena por trás da logo também dá um zoom sutil, reforçando a
- * sensação de "entrar" na imagem. A imagem de fundo nunca é recortada —
- * fica sempre visível atrás da logo.
+ * o scroll avança; (2) zoom NA imagem de fundo — a cena por trás da logo
+ * também dá um zoom sutil, reforçando a sensação de "entrar" na imagem. A
+ * imagem de fundo nunca é recortada — fica sempre visível atrás da logo.
  *
  * A prop "Modo do zoom" escolhe como a logo se comporta: "Crescer" anima do
  * Tamanho inicial até o Tamanho final (100 = cobre a caixa do container;
  * valores bem acima de 100 estouram a tela); "Tela cheia" faz a logo
  * preencher a tela inteira desde o início e permanecer assim durante todo o
- * scroll. Em ambos os modos, a opacidade da logo cai a zero entre "Início
- * do fade" e o fim da animação.
+ * scroll.
  *
  * Importante: o componente cria sua própria altura de rolagem (prop
  * "Altura do scroll", em vh) — coloque-o em uma seção de página normal,
@@ -36,7 +34,6 @@ export default function ScrollMask(props: ScrollMaskProps) {
         zoomMode = "grow",
         startSize = 30,
         endSize = 800,
-        fadeOutStart = 0.7,
         imageZoomEnd = 1.2,
         revealStart = 0.1,
         revealEnd = 0.6,
@@ -64,11 +61,6 @@ export default function ScrollMask(props: ScrollMaskProps) {
     )
 
     const size = useTransform(revealProgress, [0, 1], [startSize, endSize])
-    const logoOpacity = useTransform(
-        revealProgress,
-        [0, Math.min(fadeOutStart, 0.99), 1],
-        [1, 1, 0]
-    )
     const imageScale = useTransform(revealProgress, [0, 1], [1, imageZoomEnd])
 
     return (
@@ -152,7 +144,6 @@ export default function ScrollMask(props: ScrollMaskProps) {
                         style={
                             zoomMode === "fullscreen"
                                 ? {
-                                      opacity: logoOpacity,
                                       position: "absolute",
                                       top: "50%",
                                       left: "50%",
@@ -165,7 +156,6 @@ export default function ScrollMask(props: ScrollMaskProps) {
                                   }
                                 : {
                                       ["--p" as string]: size,
-                                      opacity: logoOpacity,
                                       position: "absolute",
                                       top: "50%",
                                       left: "50%",
@@ -195,7 +185,6 @@ interface ScrollMaskProps {
     zoomMode: "grow" | "fullscreen"
     startSize: number
     endSize: number
-    fadeOutStart: number
     imageZoomEnd: number
     revealStart: number
     revealEnd: number
@@ -217,14 +206,14 @@ addPropertyControls(ScrollMask, {
         type: ControlType.File,
         title: "Logo (SVG)",
         description:
-            "Logo exibida sobre a imagem de fundo. Aparece no tamanho inicial, dá zoom conforme o scroll e desaparece (fade) revelando a imagem por completo.",
+            "Logo exibida sobre a imagem de fundo. Aparece no tamanho inicial e dá zoom conforme o scroll.",
         allowedFileTypes: ["svg"],
     },
     zoomMode: {
         type: ControlType.Enum,
         title: "Modo do zoom",
         description:
-            "\"Crescer\" anima a logo do Tamanho inicial até o Tamanho final. \"Tela cheia\" faz a logo preencher a tela inteira desde o início e permanecer assim até o fim do scroll, sumindo só pelo fade.",
+            "\"Crescer\" anima a logo do Tamanho inicial até o Tamanho final. \"Tela cheia\" faz a logo preencher a tela inteira desde o início e permanecer assim até o fim do scroll.",
         options: ["grow", "fullscreen"],
         optionTitles: ["Crescer (zoom)", "Tela cheia"],
         defaultValue: "grow",
@@ -285,20 +274,10 @@ addPropertyControls(ScrollMask, {
         description:
             "Tamanho da logo ao final do zoom. Use um valor bem alto (ex. 800) para um zoom grande.",
         min: 0,
-        max: 2000,
+        max: 10000,
         step: 10,
         defaultValue: 800,
         hidden: (props) => props.zoomMode !== "grow",
-    },
-    fadeOutStart: {
-        type: ControlType.Number,
-        title: "Início do fade",
-        description:
-            "Ponto da animação (0 a 1, relativo a Início/Fim da revelação) em que a logo começa a sumir (opacidade), até ficar totalmente transparente no fim do zoom e revelar a imagem de fundo por completo.",
-        min: 0,
-        max: 1,
-        step: 0.05,
-        defaultValue: 0.7,
     },
     imageZoomEnd: {
         type: ControlType.Number,
