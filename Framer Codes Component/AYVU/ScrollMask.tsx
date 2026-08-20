@@ -6,10 +6,12 @@ import { addPropertyControls, ControlType } from "framer"
  * Scroll Mask
  *
  * Efeito de intro com logo: a seção fica presa (sticky) no topo enquanto a
- * página rola por ela. A logo (SVG) aparece visível no início; conforme o
- * scroll avança, ela dá um zoom grande (cresce muito) e desaparece
- * (fade out) ao final, revelando a imagem de fundo por completo. A imagem
- * de fundo em si nunca é recortada — fica sempre visível atrás da logo.
+ * página rola por ela. Duas animações de zoom acontecem em paralelo:
+ * (1) zoom DA logo — ela aparece visível no início e cresce muito conforme
+ * o scroll avança, desaparecendo (fade out) ao final; (2) zoom NA imagem
+ * de fundo — a cena por trás da logo também dá um zoom sutil, reforçando a
+ * sensação de "entrar" na imagem. A imagem de fundo nunca é recortada —
+ * fica sempre visível atrás da logo.
  *
  * O tamanho da logo no início e no fim do zoom é configurável (100 = cobre
  * a caixa do container; valores bem acima de 100 no "Tamanho final" criam
@@ -32,6 +34,7 @@ export default function ScrollMask(props: ScrollMaskProps) {
         startSize = 30,
         endSize = 800,
         fadeOutStart = 0.7,
+        imageZoomEnd = 1.2,
         revealStart = 0.1,
         revealEnd = 0.6,
         imageFit = "cover",
@@ -63,6 +66,7 @@ export default function ScrollMask(props: ScrollMaskProps) {
         [0, Math.min(fadeOutStart, 0.99), 1],
         [1, 1, 0]
     )
+    const imageScale = useTransform(revealProgress, [0, 1], [1, imageZoomEnd])
 
     return (
         <div
@@ -85,10 +89,11 @@ export default function ScrollMask(props: ScrollMaskProps) {
                     zIndex,
                 }}
             >
-                <div
+                <motion.div
                     style={{
                         position: "absolute",
                         inset: 0,
+                        scale: imageScale,
                     }}
                 >
                     {image?.src ? (
@@ -122,7 +127,7 @@ export default function ScrollMask(props: ScrollMaskProps) {
                             Selecione uma imagem no painel de propriedades.
                         </div>
                     )}
-                </div>
+                </motion.div>
 
             </div>
 
@@ -172,6 +177,7 @@ interface ScrollMaskProps {
     startSize: number
     endSize: number
     fadeOutStart: number
+    imageZoomEnd: number
     revealStart: number
     revealEnd: number
     imageFit: "cover" | "contain" | "fill"
@@ -263,6 +269,16 @@ addPropertyControls(ScrollMask, {
         max: 1,
         step: 0.05,
         defaultValue: 0.7,
+    },
+    imageZoomEnd: {
+        type: ControlType.Number,
+        title: "Zoom da imagem",
+        description:
+            "Escala da imagem de fundo ao fim da animação (1 = sem zoom). Cria o efeito de \"zoom na cena\" em paralelo ao zoom da logo.",
+        min: 1,
+        max: 3,
+        step: 0.05,
+        defaultValue: 1.2,
     },
     revealStart: {
         type: ControlType.Number,
