@@ -32,6 +32,7 @@ export default function ScrollMask(props: ScrollMaskProps) {
         shape,
         zoomMode = "grow",
         animationTiming = "duringPin",
+        lockOffset = 0,
         startSize = 30,
         endSize = 800,
         imageZoomEnd = 1.2,
@@ -50,12 +51,13 @@ export default function ScrollMask(props: ScrollMaskProps) {
 
     const wrapperRef = useRef<HTMLDivElement>(null)
 
+    const lockPoint = lockOffset > 0 ? (`start ${lockOffset}px` as const) : "start start"
+
     const { scrollYProgress } = useScroll({
         target: wrapperRef,
-        offset:
-            animationTiming === "beforePin"
-                ? ["start end", "start start"]
-                : ["start start", "end end"],
+        offset: (animationTiming === "beforePin"
+            ? ["start end", lockPoint]
+            : [lockPoint, "end end"]) as any,
     })
 
     const revealProgress = useTransform(
@@ -194,6 +196,7 @@ interface ScrollMaskProps {
     shape?: string
     zoomMode: "grow" | "fullscreen"
     animationTiming: "duringPin" | "beforePin"
+    lockOffset: number
     startSize: number
     endSize: number
     imageZoomEnd: number
@@ -239,6 +242,16 @@ addPropertyControls(ScrollMask, {
         options: ["duringPin", "beforePin"],
         optionTitles: ["During Pin", "Before Pin"],
         defaultValue: "duringPin",
+    },
+    lockOffset: {
+        type: ControlType.Number,
+        title: "Lock Offset",
+        description:
+            "How many pixels before the section is fully locked/visible the animation reaches its boundary (start of \"During Pin\", or end of \"Before Pin\"). 0 = exactly at the lock point.",
+        min: 0,
+        max: 1000,
+        step: 10,
+        defaultValue: 0,
     },
     svgZIndex: {
         type: ControlType.Number,
