@@ -1,0 +1,666 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { useParams } from "next/navigation";
+import {
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { Animation, Node, NodeType, PageBuilderProject } from "@/lib/schema";
+import {
+  findAncestors,
+  findNode,
+  generateNodeId,
+  insertNode,
+  moveNode,
+  removeNode,
+  updateNode,
+} from "@/lib/tree";
+import { DEFAULT_STYLES_BY_TYPE, NODE_TYPE_LABELS } from "@/lib/nodeRenderer";
+import { getComponentLibraryEntry } from "@/lib/componentLibrary";
+import { addField, addItem, createCollection, updateItemField } from "@/lib/collections";
+import { Canvas, DragData } from "@/components/Canvas";
+import { Palette } from "@/components/Palette";
+import { Inspector } from "@/components/Inspector";
+import { CollectionsManager } from "@/components/CollectionsManager";
+import { VersionHistory } from "@/components/VersionHistory";
+
+const AUTOSAVE_DELAY_MS = 2000;
+
+export default function ProjectEditorPage() {
+  const params = useParams<{ repo: string }>();
+  const repo = params.repo;
+
+  const [project, setProject] = useState<PageBuilderProject | null>(null);
+  const [sha, setSha] = useState<string | null>(null);
+  const [htmlUrl, setHtmlUrl] = useState<string>("#");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  /** Seleção múltipla: o "primário" (selectedId, usado pelo Inspector/resize) é sempre o último id da lista. */
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [activeBreakpointId, setActiveBreakpointId] = useState("desktop");
+  const [exporting, setExporting] = useState(false);
+  const [exportResult, setExportResult] = useState<string[] | null>(null);
+  const [collectionsModalOpen, setCollectionsModalOpen] = useState(false);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [deployUrl, setDeployUrl] = useState<string | null>(null);
+  const [autosaveStatus, setAutosaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  /** Erro de uma ação (salvar/exportar/publicar) — mostrado como banner dispensável, não substitui o editor inteiro. */
+  const [actionError, setActionError] = useState<string | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } })
+  );
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const skipNextAutosave = useRef(true);
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(`/api/projects/${repo}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Erro ao carregar projeto.");
+        setProject(data.project);
+        setSha(data.sha);
+        setHtmlUrl(data.htmlUrl ?? "#");
+        setSelectedIds(data.project.pages[0]?.root.id ? [data.project.pages[0].root.id] : []);
+        skipNextAutosave.current = true;
+      } catch (err) {
+        setError((err as Error).message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [repo]);
+
+  // Autosave: salva ~2s depois da última mudança, sem precisar clicar em
+  // "Salvar". Ignora a primeira mudança de `project` (o carregamento inicial)
+  // pra não disparar um save desnecessário assim que a página abre.
+  useEffect(() => {
+    if (!project || loading) return;
+    if (skipNextAutosave.current) {
+      skipNextAutosave.current = false;
+      return;
+    }
+
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = setTimeout(async () => {
+      setAutosaveStatus("saving");
+      try {
+        await persistProject();
+        setAutosaveStatus("saved");
+      } catch {
+        setAutosaveStatus("error");
+      }
+    }, AUTOSAVE_DELAY_MS);
+
+    return () => {
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project, loading]);
+
+  if (loading) return <p style={{ padding: 24 }}>Carregando projeto…</p>;
+  if (error) return <p style={{ padding: 24, color: "#c0392b" }}>{error}</p>;
+  if (!project) return null;
+
+  const page = project.pages[0];
+  const root = page.root;
+  const selectedId = selectedIds.length > 0 ? selectedIds[selectedIds.length - 1] : null;
+  const selectedNode = selectedId ? findNode(root, selectedId) : null;
+
+  function setSelectedId(id: string) {
+    setSelectedIds([id]);
+  }
+
+  function handleToggleSelect(id: string) {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
+  function handleMarqueeSelect(ids: string[]) {
+    if (ids.length > 0) setSelectedIds(ids);
+  }
+
+  function handleDeleteSelected() {
+    let nextRoot = root;
+    selectedIds.forEach((id) => {
+      if (id === root.id) return;
+      nextRoot = removeNode(nextRoot, id);
+    });
+    updateRoot(nextRoot);
+    setSelectedIds([]);
+  }
+
+  const ancestorPath = selectedId ? findAncestors(root, selectedId) : null;
+  const ancestorCollectionNode = ancestorPath
+    ? [...ancestorPath].reverse().slice(1).find((n) => n.type === "cms-collection")
+    : undefined;
+  const activeCollectionId = ancestorCollectionNode?.props?.collectionId as string | undefined;
+  const activeCollection = activeCollectionId ? project.collections?.[activeCollectionId] : undefined;
+
+  function updateRoot(nextRoot: Node) {
+    setProject((prev) => {
+      if (!prev) return prev;
+      const nextPages = prev.pages.map((p, i) => (i === 0 ? { ...p, root: nextRoot } : p));
+      return { ...prev, pages: nextPages };
+    });
+  }
+
+  function handleDropPaletteItem(parentId: string, nodeType: NodeType, componentId?: string) {
+    if (!project) return;
+
+    if (nodeType === "cms-collection") {
+      let collections = project.collections ?? {};
+      let collectionId: string;
+
+      if (Object.keys(collections).length === 0) {
+        let starter = createCollection("Itens");
+        starter = addField(starter, "Descrição", "text");
+        const descFieldId = starter.fields[1].id;
+        starter = addItem(starter);
+        starter = updateItemField(starter, 0, "title", "Item 1");
+        starter = updateItemField(starter, 0, descFieldId, "Descrição do item 1");
+        starter = addItem(starter);
+        starter = updateItemField(starter, 1, "title", "Item 2");
+        starter = updateItemField(starter, 1, descFieldId, "Descrição do item 2");
+        collections = { ...collections, [starter.id]: starter };
+        collectionId = starter.id;
+      } else {
+        collectionId = Object.keys(collections)[0];
+      }
+
+      const collection = collections[collectionId];
+      const titleFieldId = collection.fields[0]?.id ?? "title";
+
+      const templateTextNode: Node = {
+        id: generateNodeId("text"),
+        type: "text",
+        name: "Campo",
+        props: { content: "", binding: { field: titleFieldId } },
+        styles: { desktop: { fontSize: 16, color: "#111111" } },
+      };
+      const templateFrame: Node = {
+        id: generateNodeId("frame"),
+        type: "frame",
+        name: "Item",
+        props: {},
+        styles: {
+          desktop: {
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+            padding: 12,
+            border: "1px solid #eee",
+            borderRadius: 6,
+          },
+        },
+        children: [templateTextNode],
+      };
+      const collectionNode: Node = {
+        id: generateNodeId("cms-collection"),
+        type: "cms-collection",
+        name: "Coleção CMS",
+        props: { collectionId },
+        styles: { desktop: DEFAULT_STYLES_BY_TYPE["cms-collection"] as Record<string, unknown> },
+        children: [templateFrame],
+      };
+
+      const nextRoot = insertNode(root, parentId, collectionNode);
+      const nextPages = project.pages.map((p, i) => (i === 0 ? { ...p, root: nextRoot } : p));
+      setProject({ ...project, collections, pages: nextPages });
+      setSelectedId(collectionNode.id);
+      return;
+    }
+
+    const isContainer = nodeType === "frame";
+    const libraryEntry = componentId ? getComponentLibraryEntry(componentId) : undefined;
+
+    const newNode: Node = {
+      id: generateNodeId(nodeType),
+      type: nodeType,
+      name: libraryEntry?.name ?? NODE_TYPE_LABELS[nodeType],
+      props: libraryEntry
+        ? { componentId: libraryEntry.id, componentProps: { ...libraryEntry.defaultProps } }
+        : nodeType === "text"
+          ? { content: "Novo texto" }
+          : nodeType === "button"
+            ? { label: "Botão" }
+            : nodeType === "image"
+              ? { src: "", alt: "" }
+              : {},
+      styles: {
+        desktop: (libraryEntry
+          ? { width: "100%", height: 300 }
+          : DEFAULT_STYLES_BY_TYPE[nodeType]) as Record<string, unknown>,
+      },
+      children: isContainer ? [] : undefined,
+    };
+    updateRoot(insertNode(root, parentId, newNode));
+    setSelectedId(newNode.id);
+  }
+
+  function handleMoveNode(nodeId: string, newParentId: string) {
+    updateRoot(moveNode(root, nodeId, newParentId));
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over) return;
+
+    const parentId = String(over.id);
+    const data = active.data.current as DragData | undefined;
+    if (!data) return;
+
+    if (data.kind === "palette-item") {
+      handleDropPaletteItem(parentId, data.nodeType, data.componentId);
+    } else if (data.kind === "canvas-node" && data.nodeId !== parentId) {
+      handleMoveNode(data.nodeId, parentId);
+    }
+  }
+
+  function handleChangeProps(nodeId: string, props: Record<string, unknown>) {
+    updateRoot(updateNode(root, nodeId, { props }));
+  }
+
+  function handleChangeStyles(nodeId: string, breakpointId: string, styles: Record<string, unknown>) {
+    const node = findNode(root, nodeId);
+    if (!node) return;
+    updateRoot(updateNode(root, nodeId, { styles: { ...node.styles, [breakpointId]: styles } }));
+  }
+
+  function handleResizeNode(nodeId: string, width: number, height: number) {
+    const node = findNode(root, nodeId);
+    if (!node) return;
+    const currentStyles = (node.styles?.[activeBreakpointId] as Record<string, unknown>) ?? {};
+    updateRoot(
+      updateNode(root, nodeId, {
+        styles: { ...node.styles, [activeBreakpointId]: { ...currentStyles, width, height } },
+      })
+    );
+  }
+
+  function handleChangeName(nodeId: string, name: string) {
+    updateRoot(updateNode(root, nodeId, { name }));
+  }
+
+  function handleChangeAnimations(nodeId: string, animations: Animation[] | undefined) {
+    updateRoot(updateNode(root, nodeId, { animations }));
+  }
+
+  function handleDelete(nodeId: string) {
+    updateRoot(removeNode(root, nodeId));
+    setSelectedId(root.id);
+  }
+
+  /** Persiste o project.json atual. Retorna o novo sha, ou null se falhar. */
+  async function persistProject(): Promise<string | null> {
+    if (!project || !sha) return null;
+    const res = await fetch(`/api/projects/${repo}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ project, sha }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Erro ao salvar projeto.");
+    setSha(data.sha);
+    return data.sha;
+  }
+
+  async function handleSave() {
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    setSaving(true);
+    setActionError(null);
+    try {
+      await persistProject();
+      setAutosaveStatus("saved");
+    } catch (err) {
+      setActionError((err as Error).message);
+      setAutosaveStatus("error");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleRestoreVersion(versionId: string) {
+    const res = await fetch(`/api/projects/${repo}/versions/${versionId}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Erro ao carregar versão.");
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    skipNextAutosave.current = true;
+    setProject(data.project);
+    // Salva a versão restaurada imediatamente como o novo estado atual.
+    const putRes = await fetch(`/api/projects/${repo}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ project: data.project, sha }),
+    });
+    const putData = await putRes.json();
+    if (!putRes.ok) throw new Error(putData.error || "Erro ao restaurar versão.");
+    setSha(putData.sha);
+  }
+
+  async function handleExport() {
+    setExporting(true);
+    setExportResult(null);
+    setActionError(null);
+    try {
+      // A exportação lê o project.json persistido, não o estado em memória —
+      // salva primeiro pra garantir que reflete o que está no canvas agora.
+      await persistProject();
+      const res = await fetch(`/api/projects/${repo}/export`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao exportar projeto.");
+      setExportResult(data.paths);
+    } catch (err) {
+      setActionError((err as Error).message);
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function handlePublish() {
+    if (htmlUrl === "#") {
+      setActionError(
+        "Publicar requer o projeto configurado com GitHub (GITHUB_TOKEN/GITHUB_OWNER) — no modo local não há repositório para conectar a um host."
+      );
+      return;
+    }
+    setPublishing(true);
+    setActionError(null);
+    try {
+      await persistProject();
+      const res = await fetch(`/api/projects/${repo}/export`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao exportar projeto.");
+      setExportResult(data.paths);
+      setDeployUrl(
+        `https://vercel.com/new/clone?repository-url=${encodeURIComponent(htmlUrl)}&root-directory=export%2Fsite`
+      );
+    } catch (err) {
+      setActionError((err as Error).message);
+    } finally {
+      setPublishing(false);
+    }
+  }
+
+  return (
+    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+    <div style={{ display: "grid", gridTemplateColumns: "220px 1fr 280px", height: "100vh" }}>
+      <aside style={{ borderRight: "1px solid #eee", padding: 16, overflowY: "auto" }}>
+        <Palette />
+      </aside>
+
+      <section style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <header
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "12px 16px",
+            borderBottom: "1px solid #eee",
+          }}
+        >
+          <div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+              <strong>{project.name}</strong>
+              <span style={{ fontSize: 11, color: "#999" }}>
+                {autosaveStatus === "saving" && "Salvando…"}
+                {autosaveStatus === "saved" && "Salvo automaticamente"}
+                {autosaveStatus === "error" && (
+                  <span style={{ color: "#c0392b" }}>Falha ao salvar automaticamente</span>
+                )}
+              </span>
+            </div>
+            <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
+              {project.breakpoints.map((bp) => (
+                <button
+                  key={bp.id}
+                  onClick={() => setActiveBreakpointId(bp.id)}
+                  style={{
+                    padding: "4px 10px",
+                    fontSize: 12,
+                    borderRadius: 4,
+                    border: "1px solid #ddd",
+                    background: activeBreakpointId === bp.id ? "#0070f3" : "#fff",
+                    color: activeBreakpointId === bp.id ? "#fff" : "#333",
+                    cursor: "pointer",
+                  }}
+                >
+                  {bp.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              onClick={() => setCollectionsModalOpen(true)}
+              style={{
+                padding: "8px 16px",
+                background: "#fff",
+                color: "#333",
+                border: "1px solid #ddd",
+                borderRadius: 6,
+                cursor: "pointer",
+              }}
+            >
+              Coleções
+            </button>
+            <button
+              onClick={() => setHistoryModalOpen(true)}
+              style={{
+                padding: "8px 16px",
+                background: "#fff",
+                color: "#333",
+                border: "1px solid #ddd",
+                borderRadius: 6,
+                cursor: "pointer",
+              }}
+            >
+              Histórico
+            </button>
+            <button
+              onClick={handlePublish}
+              disabled={publishing}
+              style={{
+                padding: "8px 16px",
+                background: "#fff",
+                color: "#333",
+                border: "1px solid #ddd",
+                borderRadius: 6,
+                cursor: "pointer",
+              }}
+            >
+              {publishing ? "Publicando…" : "Publicar"}
+            </button>
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              style={{
+                padding: "8px 16px",
+                background: "#fff",
+                color: "#333",
+                border: "1px solid #ddd",
+                borderRadius: 6,
+                cursor: "pointer",
+              }}
+            >
+              {exporting ? "Exportando…" : "Exportar"}
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              style={{
+                padding: "8px 16px",
+                background: "#111",
+                color: "#fff",
+                border: "none",
+                borderRadius: 6,
+                cursor: "pointer",
+              }}
+            >
+              {saving ? "Salvando…" : "Salvar"}
+            </button>
+          </div>
+        </header>
+
+        {selectedIds.length > 1 && (
+          <div
+            style={{
+              background: "#eef4ff",
+              borderBottom: "1px solid #cddcf5",
+              padding: "8px 16px",
+              fontSize: 12,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 12,
+            }}
+          >
+            <span>{selectedIds.length} elementos selecionados (shift+clique pra ajustar, arraste na área vazia pra selecionar por retângulo)</span>
+            <button
+              onClick={handleDeleteSelected}
+              style={{
+                border: "1px solid #f5c6cb",
+                background: "#fdecea",
+                color: "#c0392b",
+                borderRadius: 4,
+                padding: "4px 10px",
+                cursor: "pointer",
+              }}
+            >
+              Excluir selecionados
+            </button>
+          </div>
+        )}
+
+        {actionError && (
+          <div
+            style={{
+              background: "#fdecea",
+              borderBottom: "1px solid #f5c6cb",
+              padding: "8px 16px",
+              fontSize: 12,
+              color: "#c0392b",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 12,
+            }}
+          >
+            <span>{actionError}</span>
+            <button
+              onClick={() => setActionError(null)}
+              style={{ border: "none", background: "none", cursor: "pointer", color: "#c0392b" }}
+            >
+              ×
+            </button>
+          </div>
+        )}
+
+        {exportResult && (
+          <div
+            style={{
+              background: "#eef7ee",
+              borderBottom: "1px solid #cde5cd",
+              padding: "8px 16px",
+              fontSize: 12,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 12,
+            }}
+          >
+            <span>
+              Exportado: {exportResult.length} arquivo(s) em <code>export/site</code> e{" "}
+              <code>export/component</code> no repositório do projeto.
+            </span>
+            <button
+              onClick={() => setExportResult(null)}
+              style={{ border: "none", background: "none", cursor: "pointer", color: "#555" }}
+            >
+              ×
+            </button>
+          </div>
+        )}
+
+        {deployUrl && (
+          <div
+            style={{
+              background: "#eef4ff",
+              borderBottom: "1px solid #cddcf5",
+              padding: "8px 16px",
+              fontSize: 12,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 12,
+            }}
+          >
+            <span>
+              Site exportado. Conecte o repositório a um host pra publicar de verdade:{" "}
+              <a href={deployUrl} target="_blank" rel="noreferrer" style={{ fontWeight: 600 }}>
+                Deploy no Vercel →
+              </a>{" "}
+              (aponta pra <code>export/site</code>; deploys seguintes acontecem sozinhos a cada commit).
+            </span>
+            <button
+              onClick={() => setDeployUrl(null)}
+              style={{ border: "none", background: "none", cursor: "pointer", color: "#555" }}
+            >
+              ×
+            </button>
+          </div>
+        )}
+
+        <div style={{ flex: 1, overflow: "hidden" }}>
+          <Canvas
+            root={root}
+            breakpoints={project.breakpoints}
+            activeBreakpointId={activeBreakpointId}
+            selectedId={selectedId}
+            selectedIds={selectedIds}
+            onSelect={setSelectedId}
+            onToggleSelect={handleToggleSelect}
+            onSelectMultiple={handleMarqueeSelect}
+            collections={project.collections ?? {}}
+            onResize={handleResizeNode}
+          />
+        </div>
+      </section>
+
+      <aside style={{ borderLeft: "1px solid #eee", padding: 16, overflowY: "auto" }}>
+        <Inspector
+          node={selectedNode}
+          isRoot={selectedNode?.id === root.id}
+          onChangeProps={handleChangeProps}
+          onChangeStyles={handleChangeStyles}
+          onChangeName={handleChangeName}
+          onChangeAnimations={handleChangeAnimations}
+          onDelete={handleDelete}
+          activeBreakpointId={activeBreakpointId}
+          collections={project.collections ?? {}}
+          activeCollection={activeCollection}
+        />
+      </aside>
+    </div>
+    {collectionsModalOpen && (
+      <CollectionsManager
+        collections={project.collections ?? {}}
+        onChange={(next) => setProject({ ...project, collections: next })}
+        onClose={() => setCollectionsModalOpen(false)}
+        initialSelectedId={activeCollectionId}
+      />
+    )}
+    {historyModalOpen && (
+      <VersionHistory repo={repo} onClose={() => setHistoryModalOpen(false)} onRestore={handleRestoreVersion} />
+    )}
+    </DndContext>
+  );
+}
