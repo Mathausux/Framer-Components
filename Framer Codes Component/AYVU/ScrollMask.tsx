@@ -40,6 +40,7 @@ export default function ScrollMask(props: ScrollMaskProps) {
         scrollHeight = 250,
         stickyTopOffset = 0,
         zIndex = 0,
+        svgZIndex = 1,
     } = props
 
     const wrapperRef = useRef<HTMLDivElement>(null)
@@ -128,6 +129,26 @@ export default function ScrollMask(props: ScrollMaskProps) {
                         </div>
                     )}
                 </motion.div>
+
+                {shape && (
+                    <motion.img
+                        src={shape}
+                        alt=""
+                        style={{
+                            ["--p" as string]: size,
+                            position: "absolute",
+                            top: "50%",
+                            left: "50%",
+                            width: "calc(var(--p) * 1%)",
+                            height: "calc(var(--p) * 1%)",
+                            transform: "translate(-50%, -50%)",
+                            zIndex: svgZIndex,
+                            pointerEvents: "none",
+                            userSelect: "none",
+                        }}
+                        draggable={false}
+                    />
+                )}
             </div>
         </div>
     )
@@ -151,6 +172,7 @@ interface ScrollMaskProps {
     scrollHeight: number
     stickyTopOffset: number
     zIndex: number
+    svgZIndex: number
 }
 
 addPropertyControls(ScrollMask, {
@@ -164,6 +186,16 @@ addPropertyControls(ScrollMask, {
         description:
             "SVG usado como máscara. Áreas preenchidas (opacas) do SVG revelam a imagem; áreas transparentes escondem.",
         allowedFileTypes: ["svg"],
+    },
+    svgZIndex: {
+        type: ControlType.Number,
+        title: "Z-Index do SVG",
+        description:
+            "Ordem de empilhamento do SVG (renderizado como elemento visível) em relação à imagem revelada. Positivo = na frente, negativo = atrás.",
+        min: -100,
+        max: 100,
+        step: 1,
+        defaultValue: 1,
     },
     scrollHeight: {
         type: ControlType.Number,
@@ -186,7 +218,7 @@ addPropertyControls(ScrollMask, {
     },
     zIndex: {
         type: ControlType.Number,
-        title: "Z-Index",
+        title: "Z-Index da seção",
         description:
             "Ordem de empilhamento da seção presa (SVG + imagem) em relação a outros elementos da página.",
         min: -100,
