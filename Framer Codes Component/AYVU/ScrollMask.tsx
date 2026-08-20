@@ -32,12 +32,15 @@ export default function ScrollMask(props: ScrollMaskProps) {
         image,
         shape,
         zoomMode = "grow",
+        animationTiming = "duringPin",
         startSize = 30,
         endSize = 800,
         imageZoomEnd = 1.2,
         revealStart = 0.1,
         revealEnd = 0.6,
         imageFit = "cover",
+        imagePadding = 0,
+        imageMaxWidth = 0,
         borderRadius = 0,
         backgroundColor = "#0A0A0A",
         scrollHeight = 250,
@@ -50,7 +53,10 @@ export default function ScrollMask(props: ScrollMaskProps) {
 
     const { scrollYProgress } = useScroll({
         target: wrapperRef,
-        offset: ["start start", "end end"],
+        offset:
+            animationTiming === "beforePin"
+                ? ["start end", "start start"]
+                : ["start start", "end end"],
     })
 
     const revealProgress = useTransform(
@@ -89,6 +95,10 @@ export default function ScrollMask(props: ScrollMaskProps) {
                         position: "absolute",
                         inset: 0,
                         scale: imageScale,
+                        padding: imagePadding,
+                        boxSizing: "border-box",
+                        display: "flex",
+                        justifyContent: "center",
                     }}
                 >
                     {image?.src ? (
@@ -98,6 +108,7 @@ export default function ScrollMask(props: ScrollMaskProps) {
                             style={{
                                 width: "100%",
                                 height: "100%",
+                                maxWidth: imageMaxWidth > 0 ? imageMaxWidth : undefined,
                                 objectFit: imageFit,
                                 display: "block",
                                 pointerEvents: "none",
@@ -183,12 +194,15 @@ interface ScrollMaskProps {
     image?: ScrollMaskImage
     shape?: string
     zoomMode: "grow" | "fullscreen"
+    animationTiming: "duringPin" | "beforePin"
     startSize: number
     endSize: number
     imageZoomEnd: number
     revealStart: number
     revealEnd: number
     imageFit: "cover" | "contain" | "fill"
+    imagePadding: number
+    imageMaxWidth: number
     borderRadius: number
     backgroundColor: string
     scrollHeight: number
@@ -217,6 +231,15 @@ addPropertyControls(ScrollMask, {
         options: ["grow", "fullscreen"],
         optionTitles: ["Crescer (zoom)", "Tela cheia"],
         defaultValue: "grow",
+    },
+    animationTiming: {
+        type: ControlType.Enum,
+        title: "Quando anima",
+        description:
+            "\"Durante o pin\" (padrão): a animação roda enquanto a seção está travada no topo. \"Antes de travar\": a animação termina de rodar enquanto a seção ainda está entrando na tela, e já fica no estado final quando trava.",
+        options: ["duringPin", "beforePin"],
+        optionTitles: ["Durante o pin", "Antes de travar"],
+        defaultValue: "duringPin",
     },
     svgZIndex: {
         type: ControlType.Number,
@@ -313,6 +336,25 @@ addPropertyControls(ScrollMask, {
         options: ["cover", "contain", "fill"],
         optionTitles: ["Cobrir", "Conter", "Preencher"],
         defaultValue: "cover",
+    },
+    imagePadding: {
+        type: ControlType.Number,
+        title: "Padding da imagem",
+        description: "Espaçamento interno (px) entre a imagem e a borda do container.",
+        min: 0,
+        max: 300,
+        step: 1,
+        defaultValue: 0,
+    },
+    imageMaxWidth: {
+        type: ControlType.Number,
+        title: "Largura máx. imagem",
+        description:
+            "Largura máxima da imagem em px. Use 0 para não limitar (a imagem ocupa toda a largura disponível).",
+        min: 0,
+        max: 3000,
+        step: 10,
+        defaultValue: 0,
     },
     borderRadius: {
         type: ControlType.Number,
