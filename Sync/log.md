@@ -32,6 +32,8 @@ Historico de sincronizacao entre Codex, Claude e outros agentes.
 | Claude | Adicionar tamanho inicial/final configuraveis da forma e suporte a SVG personalizado como mascara no Scroll Mask | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
 | Claude | Simplificar Scroll Mask: remover formas geometricas pre-definidas e seletor "Formato", manter apenas mascara via SVG importado usando ControlType.Image nativo do Framer | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
 | Claude | Ajustar Tamanho final do Scroll Mask (max 500, padrao 300) para a mascara ultrapassar a silhueta do SVG e revelar a imagem por completo | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
+| Claude | Corrigir prop "Forma (SVG)" do Scroll Mask de ControlType.Image (reprocessa/otimiza imagem, corrompe SVG bruto) para ControlType.File com allowedFileTypes svg (URL do arquivo original) | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
+| Claude | Adicionar controle de Z-Index a secao sticky (SVG + imagem) do Scroll Mask | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
 
 ## Decisoes
 

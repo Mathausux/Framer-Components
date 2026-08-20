@@ -39,6 +39,7 @@ export default function ScrollMask(props: ScrollMaskProps) {
         backgroundColor = "#0A0A0A",
         scrollHeight = 250,
         stickyTopOffset = 0,
+        zIndex = 0,
     } = props
 
     const wrapperRef = useRef<HTMLDivElement>(null)
@@ -57,7 +58,7 @@ export default function ScrollMask(props: ScrollMaskProps) {
 
     const size = useTransform(revealProgress, [0, 1], [startSize, endSize])
 
-    const maskImageValue = shape?.src ? `url(${shape.src})` : undefined
+    const maskImageValue = shape ? `url(${shape})` : undefined
 
     return (
         <div
@@ -77,6 +78,7 @@ export default function ScrollMask(props: ScrollMaskProps) {
                     overflow: "hidden",
                     borderRadius,
                     background: backgroundColor,
+                    zIndex,
                 }}
             >
                 <motion.div
@@ -138,7 +140,7 @@ interface ScrollMaskImage {
 
 interface ScrollMaskProps {
     image?: ScrollMaskImage
-    shape?: ScrollMaskImage
+    shape?: string
     startSize: number
     endSize: number
     revealStart: number
@@ -148,6 +150,7 @@ interface ScrollMaskProps {
     backgroundColor: string
     scrollHeight: number
     stickyTopOffset: number
+    zIndex: number
 }
 
 addPropertyControls(ScrollMask, {
@@ -156,10 +159,11 @@ addPropertyControls(ScrollMask, {
         title: "Imagem",
     },
     shape: {
-        type: ControlType.Image,
+        type: ControlType.File,
         title: "Forma (SVG)",
         description:
             "SVG usado como máscara. Áreas preenchidas (opacas) do SVG revelam a imagem; áreas transparentes escondem.",
+        allowedFileTypes: ["svg"],
     },
     scrollHeight: {
         type: ControlType.Number,
@@ -177,6 +181,16 @@ addPropertyControls(ScrollMask, {
         description: "Distância do topo onde a seção fica presa (px).",
         min: 0,
         max: 200,
+        step: 1,
+        defaultValue: 0,
+    },
+    zIndex: {
+        type: ControlType.Number,
+        title: "Z-Index",
+        description:
+            "Ordem de empilhamento da seção presa (SVG + imagem) em relação a outros elementos da página.",
+        min: -100,
+        max: 100,
         step: 1,
         defaultValue: 0,
     },
