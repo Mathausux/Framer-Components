@@ -149,7 +149,7 @@ export default function ScrollMask(props: ScrollMaskProps) {
                                       left: "50%",
                                       width: "100vw",
                                       height: "100vh",
-                                      objectFit: "contain",
+                                      objectFit: "cover",
                                       transform: "translate(-50%, -50%)",
                                       pointerEvents: "none",
                                       userSelect: "none",
