@@ -40,6 +40,7 @@ Historico de sincronizacao entre Codex, Claude e outros agentes.
 | Claude | Adicionar segunda animacao de zoom no Scroll Mask: alem do zoom da propria logo, a imagem de fundo tambem recebe um zoom sutil (prop "Zoom da imagem") em paralelo, reforcando a sensacao de entrar na cena | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
 | Claude | Adicionar prop "Modo do zoom" ao Scroll Mask: "Crescer" (comportamento atual, anima Tamanho inicial ate final) ou "Tela cheia" (SVG preenche a tela inteira desde o inicio e permanece ate o fim do scroll, sumindo so pelo fade) | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
 | Claude | Remover o fade de opacidade da logo no Scroll Mask (prop "Inicio do fade" e logica associada removidas); aumentar max de "Tamanho final" para 10000 | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
+| Claude | Corrigir modo "Tela cheia" do Scroll Mask: objectFit de "contain" para "cover", para o SVG preencher 100% da tela sem distorcer a forma (incluindo vazios/furos centrais), apenas recortando o excesso nas bordas | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
 
 ## Decisoes
 
