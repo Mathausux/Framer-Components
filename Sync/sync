@@ -15,6 +15,7 @@ Ler este arquivo antes de qualquer acao neste repositorio.
 - Componentes Framer ficam em `Framer Codes Component/{EMPRESA}/`.
 - Para regras completas, ler `Sync/rules.md` somente quando a tarefa exigir.
 - Para historico, ler `Sync/log.md` somente quando precisar de contexto antigo.
+- PRs concluidas devem ser mergeadas automaticamente (sem perguntar) quando estiverem verdes/sem conflitos. Detalhe em `Sync/rules.md`.
 
 ## Pastas principais
 - `Sync/`: coordenacao entre agentes.

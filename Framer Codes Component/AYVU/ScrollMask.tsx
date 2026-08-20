@@ -1,173 +1,219 @@
-import { useEffect, useRef, useState } from "react"
+import { useRef } from "react"
+import { motion, useScroll, useTransform } from "framer-motion"
 import { addPropertyControls, ControlType } from "framer"
 
 /**
  * Scroll Mask
  *
- * Container com scroll (vertical ou horizontal) que aplica um degradê de
- * máscara nas bordas, escondendo o conteúdo conforme ele sai da área
- * visível. A máscara em cada ponta some quando o scroll chega ao início ou
- * ao fim do conteúdo, revelando o conteúdo por completo.
+ * Efeito inspirado no "Scroll Mask" do React Bits Pro: conforme a página
+ * rola, uma máscara se abre e revela a imagem. Seis formas de abertura
+ * disponíveis: círculo, losango, cortina horizontal, cortina vertical,
+ * diagonal e persianas.
  *
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
- * @framerIntrinsicWidth 360
- * @framerIntrinsicHeight 420
+ * @framerIntrinsicWidth 600
+ * @framerIntrinsicHeight 500
  */
 export default function ScrollMask(props: ScrollMaskProps) {
     const {
-        items = [],
-        direction = "vertical",
-        maskSize = 60,
-        gap = 16,
-        padding = 16,
-        showScrollbar = false,
-        backgroundColor = "transparent",
+        image,
+        variant = "circle",
+        revealStart = 0.1,
+        revealEnd = 0.6,
+        blindsCount = 8,
+        imageFit = "cover",
+        borderRadius = 0,
+        backgroundColor = "#0A0A0A",
     } = props
 
-    const scrollRef = useRef<HTMLDivElement>(null)
-    const [atStart, setAtStart] = useState(true)
-    const [atEnd, setAtEnd] = useState(false)
+    const containerRef = useRef<HTMLDivElement>(null)
 
-    const isVertical = direction === "vertical"
+    const { scrollYProgress } = useScroll({
+        target: containerRef,
+        offset: ["start end", "end start"],
+    })
 
-    useEffect(() => {
-        const el = scrollRef.current
-        if (!el) return
+    const progress = useTransform(
+        scrollYProgress,
+        [revealStart, revealEnd],
+        [0, 1],
+        { clamp: true }
+    )
 
-        const threshold = 2
-
-        const updateEdges = () => {
-            if (isVertical) {
-                setAtStart(el.scrollTop <= threshold)
-                setAtEnd(
-                    el.scrollTop + el.clientHeight >=
-                        el.scrollHeight - threshold
-                )
-            } else {
-                setAtStart(el.scrollLeft <= threshold)
-                setAtEnd(
-                    el.scrollLeft + el.clientWidth >=
-                        el.scrollWidth - threshold
-                )
-            }
-        }
-
-        updateEdges()
-        el.addEventListener("scroll", updateEdges, { passive: true })
-
-        const resizeObserver = new ResizeObserver(updateEdges)
-        resizeObserver.observe(el)
-
-        return () => {
-            el.removeEventListener("scroll", updateEdges)
-            resizeObserver.disconnect()
-        }
-    }, [isVertical, items.length])
-
-    const startColor = atStart ? "black" : "transparent"
-    const endColor = atEnd ? "black" : "transparent"
-
-    const maskImage = isVertical
-        ? `linear-gradient(to bottom, ${startColor} 0px, black ${maskSize}px, black calc(100% - ${maskSize}px), ${endColor} 100%)`
-        : `linear-gradient(to right, ${startColor} 0px, black ${maskSize}px, black calc(100% - ${maskSize}px), ${endColor} 100%)`
+    const clipPath = clipPathByVariant[variant]
+    const usesMask = variant === "blinds"
+    const stripe = 100 / Math.max(blindsCount, 1)
 
     return (
         <div
-            ref={scrollRef}
-            className="framer-scroll-mask"
+            ref={containerRef}
             style={{
+                position: "relative",
                 width: "100%",
                 height: "100%",
-                overflowX: isVertical ? "hidden" : "auto",
-                overflowY: isVertical ? "auto" : "hidden",
-                display: "flex",
-                flexDirection: isVertical ? "column" : "row",
-                gap,
-                padding,
-                boxSizing: "border-box",
+                overflow: "hidden",
+                borderRadius,
                 background: backgroundColor,
-                WebkitMaskImage: maskImage,
-                maskImage,
-                scrollbarWidth: showScrollbar ? "auto" : "none",
             }}
         >
-            {items.map((item, index) => (
-                <div
-                    key={index}
-                    style={{ flex: isVertical ? "0 0 auto" : "0 0 auto" }}
-                >
-                    {item}
-                </div>
-            ))}
-            {!showScrollbar && (
-                <style>{`
-                    .framer-scroll-mask::-webkit-scrollbar {
-                        display: none;
-                    }
-                `}</style>
-            )}
+            <motion.div
+                style={{
+                    ["--p" as string]: progress,
+                    position: "absolute",
+                    inset: 0,
+                    clipPath: usesMask ? undefined : clipPath,
+                    WebkitMaskImage: usesMask
+                        ? `repeating-linear-gradient(90deg, black 0, black calc(var(--p) * ${stripe}%), transparent calc(var(--p) * ${stripe}%), transparent ${stripe}%)`
+                        : undefined,
+                    maskImage: usesMask
+                        ? `repeating-linear-gradient(90deg, black 0, black calc(var(--p) * ${stripe}%), transparent calc(var(--p) * ${stripe}%), transparent ${stripe}%)`
+                        : undefined,
+                }}
+            >
+                {image?.src ? (
+                    <img
+                        src={image.src}
+                        alt={image.alt ?? ""}
+                        style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: imageFit,
+                            display: "block",
+                            pointerEvents: "none",
+                            userSelect: "none",
+                        }}
+                        draggable={false}
+                    />
+                ) : (
+                    <div
+                        style={{
+                            width: "100%",
+                            height: "100%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "#8A8A8A",
+                            fontSize: 13,
+                            textAlign: "center",
+                            padding: 16,
+                        }}
+                    >
+                        Selecione uma imagem no painel de propriedades.
+                    </div>
+                )}
+            </motion.div>
         </div>
     )
 }
 
+type ScrollMaskVariant =
+    | "circle"
+    | "diamond"
+    | "curtainHorizontal"
+    | "curtainVertical"
+    | "diagonal"
+    | "blinds"
+
+const clipPathByVariant: Record<
+    Exclude<ScrollMaskVariant, "blinds">,
+    string
+> = {
+    circle: "circle(calc(var(--p) * 85%) at 50% 50%)",
+    diamond:
+        "polygon(50% calc(50% - var(--p) * 80%), calc(50% + var(--p) * 80%) 50%, 50% calc(50% + var(--p) * 80%), calc(50% - var(--p) * 80%) 50%)",
+    curtainHorizontal:
+        "inset(0 calc(50% - var(--p) * 50%) 0 calc(50% - var(--p) * 50%))",
+    curtainVertical:
+        "inset(calc(50% - var(--p) * 50%) 0 calc(50% - var(--p) * 50%) 0)",
+    diagonal:
+        "polygon(0 0, calc(var(--p) * 140% - 20%) 0, calc(var(--p) * 140% - 50%) 100%, 0 100%)",
+}
+
+interface ScrollMaskImage {
+    src: string
+    alt?: string
+}
+
 interface ScrollMaskProps {
-    items: React.ReactNode[]
-    direction: "vertical" | "horizontal"
-    maskSize: number
-    gap: number
-    padding: number
-    showScrollbar: boolean
+    image?: ScrollMaskImage
+    variant: ScrollMaskVariant
+    revealStart: number
+    revealEnd: number
+    blindsCount: number
+    imageFit: "cover" | "contain" | "fill"
+    borderRadius: number
     backgroundColor: string
 }
 
 addPropertyControls(ScrollMask, {
-    items: {
-        type: ControlType.Array,
-        title: "Itens",
-        control: {
-            type: ControlType.ComponentInstance,
-        },
+    image: {
+        type: ControlType.ResponsiveImage,
+        title: "Imagem",
     },
-    direction: {
+    variant: {
         type: ControlType.Enum,
-        title: "Direção",
-        options: ["vertical", "horizontal"],
-        optionTitles: ["Vertical", "Horizontal"],
-        defaultValue: "vertical",
+        title: "Formato",
+        options: [
+            "circle",
+            "diamond",
+            "curtainHorizontal",
+            "curtainVertical",
+            "diagonal",
+            "blinds",
+        ],
+        optionTitles: [
+            "Círculo",
+            "Losango",
+            "Cortina Horizontal",
+            "Cortina Vertical",
+            "Diagonal",
+            "Persianas",
+        ],
+        defaultValue: "circle",
     },
-    maskSize: {
+    blindsCount: {
         type: ControlType.Number,
-        title: "Tamanho da máscara",
-        min: 0,
-        max: 200,
+        title: "Nº persianas",
+        min: 2,
+        max: 24,
         step: 1,
-        defaultValue: 60,
+        defaultValue: 8,
+        hidden: (props) => props.variant !== "blinds",
     },
-    gap: {
+    revealStart: {
         type: ControlType.Number,
-        title: "Espaçamento",
+        title: "Início da revelação",
+        min: 0,
+        max: 1,
+        step: 0.05,
+        defaultValue: 0.1,
+    },
+    revealEnd: {
+        type: ControlType.Number,
+        title: "Fim da revelação",
+        min: 0,
+        max: 1,
+        step: 0.05,
+        defaultValue: 0.6,
+    },
+    imageFit: {
+        type: ControlType.Enum,
+        title: "Ajuste",
+        options: ["cover", "contain", "fill"],
+        optionTitles: ["Cobrir", "Conter", "Preencher"],
+        defaultValue: "cover",
+    },
+    borderRadius: {
+        type: ControlType.Number,
+        title: "Raio da borda",
         min: 0,
         max: 100,
-        step: 1,
-        defaultValue: 16,
-    },
-    padding: {
-        type: ControlType.Number,
-        title: "Padding",
-        min: 0,
-        max: 100,
-        step: 1,
-        defaultValue: 16,
-    },
-    showScrollbar: {
-        type: ControlType.Boolean,
-        title: "Scrollbar",
-        defaultValue: false,
+        defaultValue: 0,
     },
     backgroundColor: {
         type: ControlType.Color,
         title: "Fundo",
-        defaultValue: "transparent",
+        defaultValue: "#0A0A0A",
     },
 })
