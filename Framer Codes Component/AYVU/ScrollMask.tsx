@@ -7,15 +7,15 @@ import { addPropertyControls, ControlType } from "framer"
  *
  * Efeito inspirado no "Scroll Mask" do React Bits Pro: a seção fica presa
  * (sticky) no topo enquanto a página rola por ela; conforme o scroll avança,
- * uma máscara se abre e revela a imagem. Ao final do trecho de rolagem, a
- * imagem fica totalmente revelada e a seção se solta. Seis formas de
- * abertura disponíveis (círculo, losango, cortina horizontal, cortina
- * vertical, diagonal, persianas) mais a opção de usar um SVG personalizado
- * como forma da máscara.
+ * uma máscara em forma de SVG importado se abre e revela a imagem. Ao final
+ * do trecho de rolagem, a imagem fica totalmente revelada e a seção se
+ * solta.
  *
  * O tamanho da forma no início e no fim da revelação é configurável
- * (0 = totalmente escondida, 100 = totalmente revelada; valores acima de
- * 100 são permitidos para "estourar" além dos limites do container).
+ * (0 = totalmente escondida, 100 = o SVG cobre a caixa do container).
+ * Para que a imagem apareça por completo ao final, sem a silhueta do SVG
+ * visível, o tamanho final deve ultrapassar bastante os limites do
+ * container (padrão: 300).
  *
  * Importante: o componente cria sua própria altura de rolagem (prop
  * "Altura do scroll", em vh) — coloque-o em uma seção de página normal,
@@ -29,13 +29,11 @@ import { addPropertyControls, ControlType } from "framer"
 export default function ScrollMask(props: ScrollMaskProps) {
     const {
         image,
-        variant = "circle",
-        customMask,
+        shape,
         startSize = 0,
         endSize = 100,
         revealStart = 0.1,
         revealEnd = 0.6,
-        blindsCount = 8,
         imageFit = "cover",
         borderRadius = 0,
         backgroundColor = "#0A0A0A",
@@ -59,21 +57,7 @@ export default function ScrollMask(props: ScrollMaskProps) {
 
     const size = useTransform(revealProgress, [0, 1], [startSize, endSize])
 
-    const isCustom = variant === "custom" && !!customMask
-    const isBlinds = variant === "blinds"
-    const usesMaskImage = isBlinds || isCustom
-    const stripe = 100 / Math.max(blindsCount, 1)
-
-    const clipPath =
-        !usesMaskImage && variant !== "custom"
-            ? clipPathByVariant[variant]
-            : undefined
-
-    const maskImageValue = isBlinds
-        ? `repeating-linear-gradient(90deg, black 0, black calc(var(--p) * ${stripe / 100}%), transparent calc(var(--p) * ${stripe / 100}%), transparent ${stripe}%)`
-        : isCustom
-          ? `url(${customMask})`
-          : undefined
+    const maskImageValue = shape?.src ? `url(${shape.src})` : undefined
 
     return (
         <div
@@ -100,19 +84,14 @@ export default function ScrollMask(props: ScrollMaskProps) {
                         ["--p" as string]: size,
                         position: "absolute",
                         inset: 0,
-                        clipPath,
                         WebkitMaskImage: maskImageValue,
                         maskImage: maskImageValue,
-                        WebkitMaskRepeat: isCustom ? "no-repeat" : undefined,
-                        maskRepeat: isCustom ? "no-repeat" : undefined,
-                        WebkitMaskPosition: isCustom ? "center" : undefined,
-                        maskPosition: isCustom ? "center" : undefined,
-                        WebkitMaskSize: isCustom
-                            ? "calc(var(--p) * 1%) calc(var(--p) * 1%)"
-                            : undefined,
-                        maskSize: isCustom
-                            ? "calc(var(--p) * 1%) calc(var(--p) * 1%)"
-                            : undefined,
+                        WebkitMaskRepeat: "no-repeat",
+                        maskRepeat: "no-repeat",
+                        WebkitMaskPosition: "center",
+                        maskPosition: "center",
+                        WebkitMaskSize: "calc(var(--p) * 1%) calc(var(--p) * 1%)",
+                        maskSize: "calc(var(--p) * 1%) calc(var(--p) * 1%)",
                     }}
                 >
                     {image?.src ? (
@@ -152,27 +131,6 @@ export default function ScrollMask(props: ScrollMaskProps) {
     )
 }
 
-type ScrollMaskVariant =
-    | "circle"
-    | "diamond"
-    | "curtainHorizontal"
-    | "curtainVertical"
-    | "diagonal"
-    | "blinds"
-    | "custom"
-
-const clipPathByVariant: Partial<Record<ScrollMaskVariant, string>> = {
-    circle: "circle(calc(var(--p) * 1%) at 50% 50%)",
-    diamond:
-        "polygon(50% calc(50% - var(--p) * 1%), calc(50% + var(--p) * 1%) 50%, 50% calc(50% + var(--p) * 1%), calc(50% - var(--p) * 1%) 50%)",
-    curtainHorizontal:
-        "inset(0 calc((100% - var(--p) * 1%) / 2) 0 calc((100% - var(--p) * 1%) / 2))",
-    curtainVertical:
-        "inset(calc((100% - var(--p) * 1%) / 2) 0 calc((100% - var(--p) * 1%) / 2) 0)",
-    diagonal:
-        "polygon(0 0, calc(var(--p) * 1.5% - 30%) 0, calc(var(--p) * 1.5% - 50%) 100%, 0 100%)",
-}
-
 interface ScrollMaskImage {
     src: string
     alt?: string
@@ -180,13 +138,11 @@ interface ScrollMaskImage {
 
 interface ScrollMaskProps {
     image?: ScrollMaskImage
-    variant: ScrollMaskVariant
-    customMask?: string
+    shape?: ScrollMaskImage
     startSize: number
     endSize: number
     revealStart: number
     revealEnd: number
-    blindsCount: number
     imageFit: "cover" | "contain" | "fill"
     borderRadius: number
     backgroundColor: string
@@ -198,6 +154,12 @@ addPropertyControls(ScrollMask, {
     image: {
         type: ControlType.ResponsiveImage,
         title: "Imagem",
+    },
+    shape: {
+        type: ControlType.Image,
+        title: "Forma (SVG)",
+        description:
+            "SVG usado como máscara. Áreas preenchidas (opacas) do SVG revelam a imagem; áreas transparentes escondem.",
     },
     scrollHeight: {
         type: ControlType.Number,
@@ -218,46 +180,6 @@ addPropertyControls(ScrollMask, {
         step: 1,
         defaultValue: 0,
     },
-    variant: {
-        type: ControlType.Enum,
-        title: "Formato",
-        options: [
-            "circle",
-            "diamond",
-            "curtainHorizontal",
-            "curtainVertical",
-            "diagonal",
-            "blinds",
-            "custom",
-        ],
-        optionTitles: [
-            "Círculo",
-            "Losango",
-            "Cortina Horizontal",
-            "Cortina Vertical",
-            "Diagonal",
-            "Persianas",
-            "Personalizado (SVG)",
-        ],
-        defaultValue: "circle",
-    },
-    customMask: {
-        type: ControlType.File,
-        title: "SVG da forma",
-        description:
-            "SVG usado como máscara. Áreas preenchidas (opacas) do SVG revelam a imagem; áreas transparentes escondem.",
-        allowedFileTypes: ["svg"],
-        hidden: (props) => props.variant !== "custom",
-    },
-    blindsCount: {
-        type: ControlType.Number,
-        title: "Nº persianas",
-        min: 2,
-        max: 24,
-        step: 1,
-        defaultValue: 8,
-        hidden: (props) => props.variant !== "blinds",
-    },
     startSize: {
         type: ControlType.Number,
         title: "Tamanho inicial",
@@ -272,11 +194,11 @@ addPropertyControls(ScrollMask, {
         type: ControlType.Number,
         title: "Tamanho final",
         description:
-            "Tamanho da forma no fim da revelação (100 = cobre o container por completo).",
+            "Tamanho da forma no fim da revelação. Use um valor bem acima de 100 para que a forma ultrapasse os limites do container e a imagem apareça por completo, sem silhueta do SVG.",
         min: 0,
-        max: 150,
+        max: 500,
         step: 1,
-        defaultValue: 100,
+        defaultValue: 300,
     },
     revealStart: {
         type: ControlType.Number,

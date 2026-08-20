@@ -30,6 +30,8 @@ Historico de sincronizacao entre Codex, Claude e outros agentes.
 | Claude | Corrigir Scroll Mask para o efeito real do React Bits Pro (rolagem abre mascara revelando imagem em 6 formatos: circulo, losango, cortina horizontal/vertical, diagonal, persianas) via framer-motion useScroll | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
 | Claude | Adicionar comportamento sticky ao Scroll Mask (secao fica presa no topo durante o scroll e solta ao revelar a imagem por completo) | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
 | Claude | Adicionar tamanho inicial/final configuraveis da forma e suporte a SVG personalizado como mascara no Scroll Mask | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
+| Claude | Simplificar Scroll Mask: remover formas geometricas pre-definidas e seletor "Formato", manter apenas mascara via SVG importado usando ControlType.Image nativo do Framer | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
+| Claude | Ajustar Tamanho final do Scroll Mask (max 500, padrao 300) para a mascara ultrapassar a silhueta do SVG e revelar a imagem por completo | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
 
 ## Decisoes
 
