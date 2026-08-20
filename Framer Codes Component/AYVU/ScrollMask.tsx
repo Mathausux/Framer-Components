@@ -57,7 +57,7 @@ export default function ScrollMask(props: ScrollMaskProps) {
 
     const size = useTransform(revealProgress, [0, 1], [startSize, endSize])
 
-    const maskImageValue = shape?.src ? `url(${shape.src})` : undefined
+    const maskImageValue = shape ? `url(${shape})` : undefined
 
     return (
         <div
@@ -138,7 +138,7 @@ interface ScrollMaskImage {
 
 interface ScrollMaskProps {
     image?: ScrollMaskImage
-    shape?: ScrollMaskImage
+    shape?: string
     startSize: number
     endSize: number
     revealStart: number
@@ -156,10 +156,11 @@ addPropertyControls(ScrollMask, {
         title: "Imagem",
     },
     shape: {
-        type: ControlType.Image,
+        type: ControlType.File,
         title: "Forma (SVG)",
         description:
             "SVG usado como máscara. Áreas preenchidas (opacas) do SVG revelam a imagem; áreas transparentes escondem.",
+        allowedFileTypes: ["svg"],
     },
     scrollHeight: {
         type: ControlType.Number,
