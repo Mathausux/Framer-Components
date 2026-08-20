@@ -14,6 +14,7 @@ Regras completas para colaboracao entre Codex, Claude e outros agentes neste rep
 - Sem `skillinstall`, agentes podem sugerir, planejar, revisar ou preparar conteudo de skills, mas nao instalar skills.
 - Preferir commits pequenos e mensagens objetivas.
 - Nao sobrescrever trabalho de outro agente sem registrar o motivo em `Sync/log.md` ou em bloqueios no `Sync/sync`.
+- Ao concluir uma tarefa em uma pull request, fazer o merge automaticamente sem perguntar ao usuario, desde que a PR esteja com CI verde (ou sem checks configurados) e sem conflitos. Se houver CI falhando ou conflitos, resolver antes de mergear; se nao for possivel resolver, avisar o usuario em vez de mergear.
 
 ## Organizacao do repositorio
 

@@ -16,6 +16,7 @@ Ler este arquivo antes de qualquer acao neste repositorio.
 - Codigo do Page Builder fica em `Page Builder/` (app Next.js em `Page Builder/app`, schema em `Page Builder/schema`, plano em `Page Builder/docs/PLANO.md`).
 - Para regras completas, ler `Sync/rules.md` somente quando a tarefa exigir.
 - Para historico, ler `Sync/log.md` somente quando precisar de contexto antigo.
+- PRs concluidas devem ser mergeadas automaticamente (sem perguntar) quando estiverem verdes/sem conflitos. Detalhe em `Sync/rules.md`.
 
 ## Pastas principais
 - `Sync/`: coordenacao entre agentes.
