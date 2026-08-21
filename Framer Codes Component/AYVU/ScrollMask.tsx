@@ -456,12 +456,6 @@ addPropertyControls(ScrollMask, {
         title: "Background",
         defaultValue: "#0A0A0A",
     },
-    overlayFrame: {
-        type: ControlType.ComponentInstance,
-        title: "Overlay Frame",
-        description:
-            "Connect any frame/component from the Canvas to render it on top of everything in this section (above the background image and the logo). Useful for nav bars, badges, or extra content that must always stay on top while scrolling through the pin. The connected frame is forced to fill the section's width and, together with \"Overlay Height\", its height, regardless of its own size setting in Framer, and stays centered.",
-    },
     overlayStickyTop: {
         type: ControlType.Number,
         title: "Overlay Sticky Top",
@@ -472,7 +466,6 @@ addPropertyControls(ScrollMask, {
         step: 1,
         defaultValue: 0,
         unit: "px",
-        hidden: (props) => !props.overlayFrame,
     },
     overlayHeight: {
         type: ControlType.Number,
@@ -484,6 +477,11 @@ addPropertyControls(ScrollMask, {
         step: 10,
         defaultValue: 100,
         unit: "vh",
-        hidden: (props) => !props.overlayFrame,
+    },
+    overlayFrame: {
+        type: ControlType.ComponentInstance,
+        title: "Overlay Frame",
+        description:
+            "Connect any frame/component from the Canvas to render it on top of everything in this section (above the background image and the logo). Useful for nav bars, badges, or extra content that must always stay on top while scrolling through the pin. The connected frame is forced to fill the section's width and, together with \"Overlay Height\", its height, regardless of its own size setting in Framer, and stays centered.",
     },
 })
