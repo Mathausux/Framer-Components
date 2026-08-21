@@ -262,13 +262,14 @@ export default function ScrollMask(props: ScrollMaskProps) {
                             justifyContent: "center",
                         }}
                     >
-                        <div style={{ width: "100%", height: "100%" }}>
+                        <div style={{ width: "100%" }}>
                             {isValidElement<{ style?: CSSProperties }>(overlayFrame)
                                 ? cloneElement(overlayFrame, {
                                       style: {
                                           ...overlayFrame.props.style,
                                           width: "100%",
-                                          height: "100%",
+                                          marginLeft: "auto",
+                                          marginRight: "auto",
                                       },
                                   })
                                 : overlayFrame}
@@ -520,7 +521,7 @@ addPropertyControls(ScrollMask, {
         type: ControlType.Number,
         title: "Overlay Height",
         description:
-            "Height of the connected Overlay Frame, in vh. The frame is forced to stretch and fill this height, regardless of its own size setting in Framer.",
+            "Height of the area the connected Overlay Frame is centered within, in vh.",
         min: 10,
         max: 400,
         step: 10,
@@ -531,6 +532,6 @@ addPropertyControls(ScrollMask, {
         type: ControlType.ComponentInstance,
         title: "Overlay Frame",
         description:
-            "Connect any frame/component from the Canvas to render it on top of everything in this section (above the background image and the logo). Useful for nav bars, badges, or extra content that must always stay on top while scrolling through the pin. The connected frame is forced to fill the section's width and, together with \"Overlay Height\", its height, regardless of its own size setting in Framer, and stays centered.",
+            "Connect any frame/component from the Canvas to render it on top of everything in this section (above the background image and the logo). Useful for nav bars, badges, or extra content that must always stay on top while scrolling through the pin. The connected frame always fills the section's width, keeps its own height, and is centered horizontally and vertically within the area set by \"Overlay Height\".",
     },
 })
