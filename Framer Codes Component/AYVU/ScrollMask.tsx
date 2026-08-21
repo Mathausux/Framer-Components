@@ -24,6 +24,13 @@ import { addPropertyControls, ControlType } from "framer"
  * it burst past the screen); "Fullscreen" makes the logo fill the entire
  * screen from the start and stay that way for the whole scroll.
  *
+ * "Logo Mask" turns the logo into a CSS mask applied to the background
+ * image instead of a separate visible image: "Mask" reveals the image only
+ * inside the growing logo shape; "Inverse Mask" reveals the image
+ * everywhere except inside the shape, punching a growing hole through the
+ * picture. Both mask modes animate via Start Size / End Size regardless of
+ * Zoom Mode, which only applies to "None" (the default, unmasked logo).
+ *
  * Important: the component creates its own scroll height (prop "Scroll
  * Height", in vh) — place it in a normal page section, without constraining
  * the frame's height in Framer, for the pin effect to work.
@@ -44,6 +51,7 @@ export default function ScrollMask(props: ScrollMaskProps) {
         shape,
         scrollTarget,
         zoomMode = "grow",
+        maskMode = "none",
         animationTiming = "duringPin",
         lockOffset = 0,
         startSize = 30,
@@ -90,7 +98,35 @@ export default function ScrollMask(props: ScrollMaskProps) {
         ease: easeOut,
     })
     const sizePercent = useTransform(size, (value) => `${value}%`)
+    const inverseMaskSize = useTransform(size, (value) => `100% 100%, ${value}% ${value}%`)
     const imageScale = useTransform(revealProgress, [0, 1], [1, imageZoomEnd])
+
+    const maskStyle =
+        shape && maskMode !== "none"
+            ? maskMode === "inverse"
+                ? {
+                      WebkitMaskImage: `linear-gradient(#000, #000), url(${shape})`,
+                      maskImage: `linear-gradient(#000, #000), url(${shape})`,
+                      WebkitMaskRepeat: "no-repeat, no-repeat",
+                      maskRepeat: "no-repeat, no-repeat",
+                      WebkitMaskPosition: "center, center",
+                      maskPosition: "center, center",
+                      WebkitMaskSize: inverseMaskSize,
+                      maskSize: inverseMaskSize,
+                      WebkitMaskComposite: "xor",
+                      maskComposite: "exclude",
+                  }
+                : {
+                      WebkitMaskImage: `url(${shape})`,
+                      maskImage: `url(${shape})`,
+                      WebkitMaskRepeat: "no-repeat",
+                      maskRepeat: "no-repeat",
+                      WebkitMaskPosition: "center",
+                      maskPosition: "center",
+                      WebkitMaskSize: sizePercent,
+                      maskSize: sizePercent,
+                  }
+            : {}
 
     return (
         <div
@@ -138,6 +174,7 @@ export default function ScrollMask(props: ScrollMaskProps) {
                                 boxSizing: "border-box",
                                 display: "flex",
                                 justifyContent: "center",
+                                ...maskStyle,
                             }}
                         >
                             {image?.src ? (
@@ -176,7 +213,7 @@ export default function ScrollMask(props: ScrollMaskProps) {
                     </div>
                 </div>
 
-                {shape && (
+                {shape && maskMode === "none" && (
                     <motion.img
                         src={shape}
                         alt=""
@@ -253,6 +290,7 @@ interface ScrollMaskProps {
     shape?: string
     scrollTarget?: RefObject<HTMLElement>
     zoomMode: "grow" | "fullscreen"
+    maskMode: "none" | "mask" | "inverse"
     animationTiming: "duringPin" | "beforePin"
     lockOffset: number
     startSize: number
@@ -293,14 +331,24 @@ addPropertyControls(ScrollMask, {
         description:
             "Optional: pick another layer/section on the page to drive the animation's scroll progress instead of this component's own section. Useful when the animation should start earlier or later than where this component sits.",
     },
+    maskMode: {
+        type: ControlType.Enum,
+        title: "Logo Mask",
+        description:
+            "\"None\" (default): the logo renders as a separate zooming image on top of the picture, controlled by \"Zoom Mode\" below. \"Mask\": the SVG becomes a mask, revealing the background image only inside the growing logo shape. \"Inverse Mask\": the image is revealed everywhere EXCEPT inside the shape, punching a growing hole through the picture. Both mask modes animate via Start Size / End Size and ignore \"Zoom Mode\".",
+        options: ["none", "mask", "inverse"],
+        optionTitles: ["None (visible logo)", "Mask (reveal inside)", "Inverse Mask (reveal outside)"],
+        defaultValue: "none",
+    },
     zoomMode: {
         type: ControlType.Enum,
         title: "Zoom Mode",
         description:
-            "\"Grow\" animates the logo from Start Size to End Size. \"Fullscreen\" makes the logo fill the entire screen from the start and stay that way until the end of the scroll.",
+            "\"Grow\" animates the logo from Start Size to End Size. \"Fullscreen\" makes the logo fill the entire screen from the start and stay that way until the end of the scroll. Only applies when \"Logo Mask\" is \"None\".",
         options: ["grow", "fullscreen"],
         optionTitles: ["Grow (zoom)", "Fullscreen"],
         defaultValue: "grow",
+        hidden: (props) => props.maskMode !== "none",
     },
     animationTiming: {
         type: ControlType.Enum,
@@ -325,11 +373,12 @@ addPropertyControls(ScrollMask, {
         type: ControlType.Number,
         title: "SVG Z-Index",
         description:
-            "Stacking order of the SVG relative to the background image within this section. Positive = in front of the image, negative = behind it. Use \"Section Z-Index\" to control stacking against the rest of the page.",
+            "Stacking order of the SVG relative to the background image within this section. Positive = in front of the image, negative = behind it. Use \"Section Z-Index\" to control stacking against the rest of the page. Only applies when \"Logo Mask\" is \"None\".",
         min: -1,
         max: 10,
         step: 1,
         defaultValue: 1,
+        hidden: (props) => props.maskMode !== "none",
     },
     scrollHeight: {
         type: ControlType.Number,
@@ -364,23 +413,23 @@ addPropertyControls(ScrollMask, {
         type: ControlType.Number,
         title: "Start Size",
         description:
-            "Logo size before scrolling (100 = covers the container box). Use a visible value, e.g. 30.",
+            "Logo/mask size before scrolling (100 = covers the container box). Use a visible value, e.g. 30.",
         min: 0,
         max: 10000,
         step: 10,
         defaultValue: 30,
-        hidden: (props) => props.zoomMode !== "grow",
+        hidden: (props) => props.zoomMode !== "grow" && props.maskMode === "none",
     },
     endSize: {
         type: ControlType.Number,
         title: "End Size",
         description:
-            "Logo size at the end of the zoom. Use a very high value (e.g. 800) for a big zoom.",
+            "Logo/mask size at the end of the zoom. Use a very high value (e.g. 800) for a big zoom.",
         min: 0,
         max: 10000,
         step: 10,
         defaultValue: 800,
-        hidden: (props) => props.zoomMode !== "grow",
+        hidden: (props) => props.zoomMode !== "grow" && props.maskMode === "none",
     },
     imageZoomEnd: {
         type: ControlType.Number,
