@@ -218,7 +218,9 @@ export default function ScrollMask(props: ScrollMaskProps) {
                             justifyContent: "center",
                         }}
                     >
-                        {overlayFrame}
+                        <div style={{ width: "100%", height: "100%" }}>
+                            {overlayFrame}
+                        </div>
                     </div>
                 )}
             </div>
@@ -461,7 +463,7 @@ addPropertyControls(ScrollMask, {
         type: ControlType.Number,
         title: "Overlay Height",
         description:
-            "Height of the overlay area, in vh. The overlay's content is centered inside this area both horizontally and vertically.",
+            "Height of the connected Overlay Frame, in vh. The frame stretches to fill this height (set its size to \"Fill\" in Framer for this to take effect) and stays centered horizontally and vertically.",
         min: 10,
         max: 400,
         step: 10,
