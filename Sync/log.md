@@ -67,6 +67,12 @@ Historico de sincronizacao entre Codex, Claude e outros agentes.
 | Claude | Corrigir SVG ainda sumindo no modo "Before Pin" do Scroll Mask (usuario confirmou: so a imagem de fundo aparece, o SVG nunca). Trocado o mecanismo de tamanho do SVG na variante "grow" de custom property CSS (--p + calc()) para binding direto de width/height como string percentual via useTransform encadeado, removendo dependencia de suporte a CSS var em motion value | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
 | Claude | Adicionar prop "Scroll Trigger" (ControlType.ComponentInstance) ao Scroll Mask: permite escolher outra layer/secao da pagina como referencia de scroll para o useScroll, em vez da propria secao do componente, para controlar a partir de onde a animacao comeca | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
 
+## 2026-08-21
+
+| Agente | Tarefa | Arquivos | Status |
+| --- | --- | --- | --- |
+| Claude | Corrigir prop "Image Height" do Scroll Mask, que na pratica ficava travada em 100vh (o container de recorte externo tinha altura fixa em 100vh, entao aumentar Image Height so gerava um zoom recortado, sem a imagem crescer de verdade em tela); agora a altura da secao sticky acompanha `max(100, imageHeight)vh`, entao a imagem realmente ocupa mais espaco vertical. Adicionadas props "Overlay Frame" (ControlType.ComponentInstance), "Overlay Sticky Top" e "Overlay Height" (vh): a area do overlay preenche 100% da largura, tem altura configuravel em vh e centraliza o conteudo conectado tanto horizontal quanto verticalmente via flexbox | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
+
 ## Decisoes
 
 - `Page Builder/` concentra o editor visual estilo Framer, desenvolvido por fases (ver `Page Builder/docs/PLANO.md`). Cada projeto criado pelo editor vira um repositorio GitHub proprio.
