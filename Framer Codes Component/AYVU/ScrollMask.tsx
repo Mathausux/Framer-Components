@@ -347,8 +347,8 @@ addPropertyControls(ScrollMask, {
         description:
             "Logo size before scrolling (100 = covers the container box). Use a visible value, e.g. 30.",
         min: 0,
-        max: 150,
-        step: 1,
+        max: 10000,
+        step: 10,
         defaultValue: 30,
         hidden: (props) => props.zoomMode !== "grow",
     },
