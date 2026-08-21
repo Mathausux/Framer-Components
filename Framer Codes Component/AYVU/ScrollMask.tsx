@@ -1,4 +1,4 @@
-import { useRef, type RefObject } from "react"
+import { useRef, type ReactNode, type RefObject } from "react"
 import { motion, useScroll, useTransform } from "framer-motion"
 import { addPropertyControls, ControlType } from "framer"
 
@@ -47,13 +47,19 @@ export default function ScrollMask(props: ScrollMaskProps) {
         imageFit = "cover",
         imagePadding = "0px 0px 0px 0px",
         imageMaxWidth = 0,
+        imageHeight = 100,
         borderRadius = 0,
         backgroundColor = "#0A0A0A",
         scrollHeight = 250,
         stickyTopOffset = 0,
         zIndex = 0,
         svgZIndex = 1,
+        overlayFrame,
+        overlayStickyTop = 0,
+        overlayHeight = 100,
     } = props
+
+    const pinnedHeight = Math.max(100, imageHeight)
 
     const wrapperRef = useRef<HTMLDivElement>(null)
 
@@ -91,7 +97,7 @@ export default function ScrollMask(props: ScrollMaskProps) {
                     position: "sticky",
                     top: stickyTopOffset,
                     width: "100%",
-                    height: "100vh",
+                    height: `${pinnedHeight}vh`,
                     background: backgroundColor,
                     zIndex,
                 }}
@@ -104,50 +110,61 @@ export default function ScrollMask(props: ScrollMaskProps) {
                         borderRadius,
                     }}
                 >
-                    <motion.div
+                    <div
                         style={{
                             position: "absolute",
-                            inset: 0,
-                            scale: imageScale,
-                            padding: imagePadding,
-                            boxSizing: "border-box",
-                            display: "flex",
-                            justifyContent: "center",
+                            top: "50%",
+                            left: 0,
+                            right: 0,
+                            height: `${imageHeight}vh`,
+                            transform: "translateY(-50%)",
                         }}
                     >
-                        {image?.src ? (
-                            <img
-                                src={image.src}
-                                alt={image.alt ?? ""}
-                                style={{
-                                    width: "100%",
-                                    height: "100%",
-                                    maxWidth: imageMaxWidth > 0 ? imageMaxWidth : undefined,
-                                    objectFit: imageFit,
-                                    display: "block",
-                                    pointerEvents: "none",
-                                    userSelect: "none",
-                                }}
-                                draggable={false}
-                            />
-                        ) : (
-                            <div
-                                style={{
-                                    width: "100%",
-                                    height: "100%",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    color: "#8A8A8A",
-                                    fontSize: 13,
-                                    textAlign: "center",
-                                    padding: 16,
-                                }}
-                            >
-                                Select an image in the properties panel.
-                            </div>
-                        )}
-                    </motion.div>
+                        <motion.div
+                            style={{
+                                position: "absolute",
+                                inset: 0,
+                                scale: imageScale,
+                                padding: imagePadding,
+                                boxSizing: "border-box",
+                                display: "flex",
+                                justifyContent: "center",
+                            }}
+                        >
+                            {image?.src ? (
+                                <img
+                                    src={image.src}
+                                    alt={image.alt ?? ""}
+                                    style={{
+                                        width: "100%",
+                                        height: "100%",
+                                        maxWidth: imageMaxWidth > 0 ? imageMaxWidth : undefined,
+                                        objectFit: imageFit,
+                                        display: "block",
+                                        pointerEvents: "none",
+                                        userSelect: "none",
+                                    }}
+                                    draggable={false}
+                                />
+                            ) : (
+                                <div
+                                    style={{
+                                        width: "100%",
+                                        height: "100%",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        color: "#8A8A8A",
+                                        fontSize: 13,
+                                        textAlign: "center",
+                                        padding: 16,
+                                    }}
+                                >
+                                    Select an image in the properties panel.
+                                </div>
+                            )}
+                        </motion.div>
+                    </div>
                 </div>
 
                 {shape && (
@@ -184,6 +201,24 @@ export default function ScrollMask(props: ScrollMaskProps) {
                         draggable={false}
                     />
                 )}
+
+                {overlayFrame && (
+                    <div
+                        style={{
+                            position: "sticky",
+                            top: overlayStickyTop,
+                            width: "100%",
+                            height: `${overlayHeight}vh`,
+                            zIndex: 9999,
+                            pointerEvents: "auto",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                        }}
+                    >
+                        {overlayFrame}
+                    </div>
+                )}
             </div>
         </div>
     )
@@ -209,12 +244,16 @@ interface ScrollMaskProps {
     imageFit: "cover" | "contain" | "fill"
     imagePadding: string
     imageMaxWidth: number
+    imageHeight: number
     borderRadius: number
     backgroundColor: string
     scrollHeight: number
     stickyTopOffset: number
     zIndex: number
     svgZIndex: number
+    overlayFrame?: ReactNode
+    overlayStickyTop: number
+    overlayHeight: number
 }
 
 addPropertyControls(ScrollMask, {
@@ -308,8 +347,8 @@ addPropertyControls(ScrollMask, {
         description:
             "Logo size before scrolling (100 = covers the container box). Use a visible value, e.g. 30.",
         min: 0,
-        max: 150,
-        step: 1,
+        max: 10000,
+        step: 10,
         defaultValue: 30,
         hidden: (props) => props.zoomMode !== "grow",
     },
@@ -375,6 +414,17 @@ addPropertyControls(ScrollMask, {
         step: 10,
         defaultValue: 0,
     },
+    imageHeight: {
+        type: ControlType.Number,
+        title: "Image Height",
+        description:
+            "Height of the pinned section and image area, in vh (100 = one screen tall). Values above 100 make the section itself taller, so the image actually grows instead of just zooming inside a fixed 100vh box.",
+        min: 100,
+        max: 400,
+        step: 10,
+        defaultValue: 100,
+        unit: "vh",
+    },
     borderRadius: {
         type: ControlType.Number,
         title: "Border Radius",
@@ -386,5 +436,35 @@ addPropertyControls(ScrollMask, {
         type: ControlType.Color,
         title: "Background",
         defaultValue: "#0A0A0A",
+    },
+    overlayFrame: {
+        type: ControlType.ComponentInstance,
+        title: "Overlay Frame",
+        description:
+            "Connect any frame/component from the Canvas to render it on top of everything in this section (above the background image and the logo). Useful for nav bars, badges, or extra content that must always stay on top while scrolling through the pin. The overlay area fills the width and is centered both horizontally and vertically.",
+    },
+    overlayStickyTop: {
+        type: ControlType.Number,
+        title: "Overlay Sticky Top",
+        description:
+            "The overlay frame sticks at this distance (px) from the top of the screen as the page scrolls through the pinned section.",
+        min: 0,
+        max: 500,
+        step: 1,
+        defaultValue: 0,
+        unit: "px",
+        hidden: (props) => !props.overlayFrame,
+    },
+    overlayHeight: {
+        type: ControlType.Number,
+        title: "Overlay Height",
+        description:
+            "Height of the overlay area, in vh. The overlay's content is centered inside this area both horizontally and vertically.",
+        min: 10,
+        max: 400,
+        step: 10,
+        defaultValue: 100,
+        unit: "vh",
+        hidden: (props) => !props.overlayFrame,
     },
 })
