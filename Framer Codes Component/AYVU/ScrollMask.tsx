@@ -1,5 +1,5 @@
 import { useRef, type ReactNode, type RefObject } from "react"
-import { motion, useScroll, useTransform } from "framer-motion"
+import { easeOut, motion, useScroll, useTransform } from "framer-motion"
 import { addPropertyControls, ControlType } from "framer"
 
 /**
@@ -79,7 +79,9 @@ export default function ScrollMask(props: ScrollMaskProps) {
         { clamp: true }
     )
 
-    const size = useTransform(revealProgress, [0, 1], [startSize, endSize])
+    const size = useTransform(revealProgress, [0, 1], [startSize, endSize], {
+        ease: easeOut,
+    })
     const sizePercent = useTransform(size, (value) => `${value}%`)
     const imageScale = useTransform(revealProgress, [0, 1], [1, imageZoomEnd])
 
