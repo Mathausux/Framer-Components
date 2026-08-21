@@ -262,14 +262,19 @@ export default function ScrollMask(props: ScrollMaskProps) {
                             justifyContent: "center",
                         }}
                     >
-                        <div style={{ width: "100%" }}>
+                        <div style={{ width: "100%", display: "flex", justifyContent: "center" }}>
                             {isValidElement<{ style?: CSSProperties }>(overlayFrame)
                                 ? cloneElement(overlayFrame, {
                                       style: {
                                           ...overlayFrame.props.style,
+                                          position: "relative",
+                                          top: "auto",
+                                          left: "auto",
+                                          right: "auto",
+                                          bottom: "auto",
+                                          transform: "none",
                                           width: "100%",
-                                          marginLeft: "auto",
-                                          marginRight: "auto",
+                                          maxWidth: "100%",
                                       },
                                   })
                                 : overlayFrame}
