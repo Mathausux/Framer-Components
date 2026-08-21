@@ -72,6 +72,8 @@ Historico de sincronizacao entre Codex, Claude e outros agentes.
 | Agente | Tarefa | Arquivos | Status |
 | --- | --- | --- | --- |
 | Claude | Corrigir prop "Image Height" do Scroll Mask, que na pratica ficava travada em 100vh (o container de recorte externo tinha altura fixa em 100vh, entao aumentar Image Height so gerava um zoom recortado, sem a imagem crescer de verdade em tela); agora a altura da secao sticky acompanha `max(100, imageHeight)vh`, entao a imagem realmente ocupa mais espaco vertical. Adicionadas props "Overlay Frame" (ControlType.ComponentInstance), "Overlay Sticky Top" e "Overlay Height" (vh): a area do overlay preenche 100% da largura, tem altura configuravel em vh e centraliza o conteudo conectado tanto horizontal quanto verticalmente via flexbox | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
+| Claude | Aumentar max de "Start Size" do Scroll Mask de 150 para 10000, igualando ao max de "End Size" | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
+| Claude | Suavizar o zoom do SVG do Scroll Mask: aplicado easing `easeOut` (framer-motion) na interpolacao de Tamanho inicial para Tamanho final, ja que a interpolacao linear anterior fazia o trecho final do zoom parecer brusco/rapido ao aproximar do valor definido | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
 
 ## Decisoes
 
