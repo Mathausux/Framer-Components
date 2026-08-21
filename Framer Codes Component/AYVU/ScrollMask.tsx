@@ -1,4 +1,11 @@
-import { useRef, type ReactNode, type RefObject } from "react"
+import {
+    cloneElement,
+    isValidElement,
+    useRef,
+    type CSSProperties,
+    type ReactNode,
+    type RefObject,
+} from "react"
 import { easeOut, motion, useScroll, useTransform } from "framer-motion"
 import { addPropertyControls, ControlType } from "framer"
 
@@ -219,7 +226,15 @@ export default function ScrollMask(props: ScrollMaskProps) {
                         }}
                     >
                         <div style={{ width: "100%", height: "100%" }}>
-                            {overlayFrame}
+                            {isValidElement<{ style?: CSSProperties }>(overlayFrame)
+                                ? cloneElement(overlayFrame, {
+                                      style: {
+                                          ...overlayFrame.props.style,
+                                          width: "100%",
+                                          height: "100%",
+                                      },
+                                  })
+                                : overlayFrame}
                         </div>
                     </div>
                 )}
@@ -445,7 +460,7 @@ addPropertyControls(ScrollMask, {
         type: ControlType.ComponentInstance,
         title: "Overlay Frame",
         description:
-            "Connect any frame/component from the Canvas to render it on top of everything in this section (above the background image and the logo). Useful for nav bars, badges, or extra content that must always stay on top while scrolling through the pin. The overlay area fills the width and is centered both horizontally and vertically.",
+            "Connect any frame/component from the Canvas to render it on top of everything in this section (above the background image and the logo). Useful for nav bars, badges, or extra content that must always stay on top while scrolling through the pin. The connected frame is forced to fill the section's width and, together with \"Overlay Height\", its height, regardless of its own size setting in Framer, and stays centered.",
     },
     overlayStickyTop: {
         type: ControlType.Number,
@@ -463,7 +478,7 @@ addPropertyControls(ScrollMask, {
         type: ControlType.Number,
         title: "Overlay Height",
         description:
-            "Height of the connected Overlay Frame, in vh. The frame stretches to fill this height (set its size to \"Fill\" in Framer for this to take effect) and stays centered horizontally and vertically.",
+            "Height of the connected Overlay Frame, in vh. The frame is forced to stretch and fill this height, regardless of its own size setting in Framer.",
         min: 10,
         max: 400,
         step: 10,
