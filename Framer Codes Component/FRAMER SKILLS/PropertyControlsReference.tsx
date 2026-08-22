@@ -12,6 +12,16 @@ import { addPropertyControls, ControlType } from "framer"
  * not read as source — open the "Property Controls" panel and change a
  * value to see the corresponding card update live.
  *
+ * Covers the 21 ControlType values documented and stable as of this
+ * writing (Boolean, Number, String, Enum, SegmentedEnum, Color, Image,
+ * ResponsiveImage, File, Font, Padding, BorderRadius, Border, BoxShadow,
+ * Transition, FusedNumber, Array, Object, ComponentInstance,
+ * EventHandler, Link, Date). This is NOT guaranteed to be the full,
+ * current list — Framer's API evolves, and this wasn't checked against
+ * a live `framer` package or the official docs. Cross-check
+ * framer.com/developers (or the `ControlType` type in node_modules
+ * `framer/dist/types`) before treating it as exhaustive.
+ *
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  * @framerIntrinsicWidth 900
@@ -225,6 +235,11 @@ export default function PropertyControlsReference(
                     <code style={inlineCode}>ControlType</code> diferente. Ajuste os valores no
                     painel de propriedades para ver a atualização em tempo real.
                 </p>
+                <p style={disclaimer}>
+                    Cobre os 21 ControlType documentados e estáveis até o momento desta versão.
+                    Não é garantia de lista exaustiva/atualizada — a API do Framer evolui;
+                    confira framer.com/developers antes de tratar como definitiva.
+                </p>
             </header>
 
             <div style={{ ...grid, gap }}>
@@ -333,6 +348,17 @@ const introText: CSSProperties = {
     fontSize: 14,
     lineHeight: 1.6,
     color: "#4B5262",
+}
+
+const disclaimer: CSSProperties = {
+    margin: "10px 0 0",
+    fontSize: 11.5,
+    lineHeight: 1.55,
+    color: "#A9660A",
+    background: "#FBEED9",
+    padding: "8px 12px",
+    borderRadius: 8,
+    maxWidth: 560,
 }
 
 const inlineCode: CSSProperties = {
