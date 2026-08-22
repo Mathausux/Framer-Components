@@ -443,115 +443,154 @@ addPropertyControls(PropertyControlsReference, {
     },
     showToggle: {
         type: ControlType.Boolean,
-        title: "Boolean example",
+        title: "Boolean",
         defaultValue: true,
+        description:
+            "Renderiza um interruptor sim/não. Use para recursos que existem ou não — mostrar/ocultar algo, ligar um comportamento.",
     },
     count: {
         type: ControlType.Number,
-        title: "Number example",
+        title: "Number",
         min: 0,
         max: 20,
         step: 1,
         defaultValue: 4,
+        description:
+            "Campo numérico com slider, faixa (min/max) e passo (step) configuráveis. Use para quantidades, tamanhos e durações.",
     },
     variant: {
         type: ControlType.Enum,
-        title: "Enum example",
+        title: "Enum",
         options: ["cover", "contain", "fill"],
         optionTitles: ["Cover", "Contain", "Fill"],
         defaultValue: "cover",
+        description:
+            'Escolha única entre valores fixos, exibida como dropdown. "options" traz os valores reais e "optionTitles" os rótulos amigáveis, na mesma ordem.',
     },
     align: {
         type: ControlType.SegmentedEnum,
-        title: "SegmentedEnum example",
+        title: "SegmentedEnum",
         options: ["left", "center", "right"],
         optionIcons: ["align-left", "align-center", "align-right"],
         defaultValue: "left",
+        description:
+            "Como o Enum, mas sempre exibido como botões segmentados — ótimo para alinhamento e direção, com suporte a ícones em vez de texto.",
     },
     tint: {
         type: ControlType.Color,
-        title: "Color example",
+        title: "Color",
         defaultValue: "#0F7D72",
+        description:
+            "Seletor de cor nativo do Framer, com suporte a Color Styles e variáveis do projeto.",
     },
     photo: {
         type: ControlType.ResponsiveImage,
-        title: "ResponsiveImage example",
+        title: "ResponsiveImage",
+        description:
+            "Upload de imagem com srcSet gerado automaticamente pelo Framer — várias resoluções para carregar mais rápido no site publicado.",
     },
     icon: {
         type: ControlType.File,
-        title: "File example",
+        title: "File",
         allowedFileTypes: ["svg"],
+        description:
+            'Upload de qualquer arquivo, aqui restrito a SVG via "allowedFileTypes". Use para logos, ícones e outros assets.',
     },
     heading: {
         type: ControlType.Font,
-        title: "Font example",
+        title: "Font",
         controls: "extended",
         defaultValue: { fontSize: 24, fontWeight: 600 },
+        description:
+            'Seletor completo de tipografia — família, peso, tamanho e espaçamento — puxando as fontes do projeto. "controls: extended" expõe mais subpropriedades.',
     },
     innerSpacing: {
         type: ControlType.Padding,
-        title: "Padding example",
+        title: "Padding",
         defaultValue: "16px 16px 16px 16px",
+        description:
+            "Editor visual de espaçamento interno com os 4 lados vinculáveis por um cadeado, igual ao painel de estilo nativo.",
     },
     corner: {
         type: ControlType.BorderRadius,
-        title: "BorderRadius example",
+        title: "BorderRadius",
         defaultValue: "12px",
+        description:
+            "Editor de raio de borda por canto, ou um único valor vinculado a todos os cantos.",
     },
     outline: {
         type: ControlType.Border,
-        title: "Border example",
+        title: "Border",
         defaultValue: { borderWidth: 1, borderStyle: "solid", borderColor: "#0F7D72" },
+        description:
+            "Largura, estilo (sólido/tracejado/pontilhado) e cor de borda — pode variar por lado, igual ao painel Border nativo.",
     },
     elevation: {
         type: ControlType.BoxShadow,
-        title: "BoxShadow example",
+        title: "BoxShadow",
         defaultValue: "0px 8px 24px rgba(15,125,114,0.18)",
+        description:
+            "Uma ou mais sombras empilháveis, com cor, blur, spread, offset e opção inset (sombra interna).",
     },
     motionCurve: {
         type: ControlType.Transition,
-        title: "Transition example",
+        title: "Transition",
         defaultValue: { type: "spring", stiffness: 200, damping: 20 },
+        description:
+            "Curva de animação completa (spring, ease ou tween) com duração/rigidez e delay, no mesmo formato do Framer Motion.",
     },
     gap: {
         type: ControlType.FusedNumber,
-        title: "FusedNumber example",
+        title: "FusedNumber",
         toggleKey: "gapLinked",
         toggleTitles: ["Linked", "Per side"],
         valueKeys: ["gap"],
         valueLabels: ["Gap"],
         defaultValue: 12,
+        description:
+            'Números relacionados com um toggle para "vincular todos" a um único valor ou editar cada um separadamente.',
     },
     tags: {
         type: ControlType.Array,
-        title: "Array example",
+        title: "Array",
         control: { type: ControlType.String },
         defaultValue: ["framer", "code-component", "reference"],
+        description:
+            'Lista repetível de itens, cada um controlado pelo tipo definido em "control" — aqui, uma lista de textos. Pode conter qualquer outro ControlType, inclusive Object.',
     },
     meta: {
         type: ControlType.Object,
-        title: "Object example",
+        title: "Object",
         controls: {
             author: { type: ControlType.String, defaultValue: "AYVU" },
             version: { type: ControlType.String, defaultValue: "1.0" },
         },
+        description:
+            "Agrupa vários controles relacionados em uma seção colapsável — bom para organizar um painel grande em blocos.",
     },
     slot: {
         type: ControlType.ComponentInstance,
-        title: "ComponentInstance example",
-        description: "Conecte qualquer frame do canvas para ver o slot preenchido.",
+        title: "ComponentInstance",
+        description:
+            "Slot para arrastar qualquer frame/componente do canvas para dentro deste componente. Chega no código como ReactNode. Conecte um frame para ver o slot preenchido.",
     },
     onAction: {
         type: ControlType.EventHandler,
-        title: "EventHandler example",
+        title: "EventHandler",
+        description:
+            "Expõe um evento que pode ser ligado a uma interação do Framer (ex.: ao clicar), sem escrever código.",
     },
     destination: {
         type: ControlType.Link,
-        title: "Link example",
+        title: "Link",
         defaultValue: "https://www.framer.com/developers/",
+        description:
+            "Campo de URL com suporte nativo a páginas internas do projeto Framer, além de links externos.",
     },
     eventDate: {
         type: ControlType.Date,
-        title: "Date example",
+        title: "Date",
+        description:
+            "Seletor de data em calendário — útil para contadores regressivos ou conteúdo agendado.",
     },
 })
