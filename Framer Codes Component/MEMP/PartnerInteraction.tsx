@@ -5,12 +5,12 @@ import { addPropertyControls, ControlType } from "framer"
 /**
  * Partner Interaction
  *
- * A single logo box that randomly swaps between the logos it was given.
- * One logo is picked at random on load, and — if "Change Interval" is
- * greater than 0 — a different random logo (never the one currently
- * showing) replaces it with a slide-to-top transition on that interval:
- * the current logo slides up and out while the next one slides in from
- * the bottom.
+ * A single logo box that starts on the first logo in the "Logos" list —
+ * reorder that list (drag items in the properties panel) to choose which
+ * one shows first. From there, if "Change Interval" is greater than 0, a
+ * different random logo (never the one currently showing) replaces it
+ * with a slide-to-top transition on that interval: the current logo
+ * slides up and out while the next one slides in from the bottom.
  *
  * Each logo carries its own link. The whole box is a link to whichever
  * logo is currently showing, so clicking it always opens that partner's
@@ -44,9 +44,8 @@ export default function PartnerInteraction(props: PartnerInteractionProps) {
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
     useEffect(() => {
-        if (validLogos.length === 0) return
-        setIndex(Math.floor(Math.random() * validLogos.length))
-    }, [validLogos.length])
+        if (index >= validLogos.length) setIndex(0)
+    }, [validLogos.length, index])
 
     useEffect(() => {
         if (!changeInterval || validLogos.length < 2) return
@@ -253,7 +252,7 @@ addPropertyControls(PartnerInteraction, {
         type: ControlType.Array,
         title: "Logos",
         description:
-            "Add every partner logo and its own link. One is shown at random, and — if Change Interval is greater than 0 — a different random logo slides in on that interval. The box always links to whichever logo is currently showing.",
+            "Add every partner logo and its own link. Drag items to reorder — the first one in the list is shown first. If Change Interval is greater than 0, a different random logo slides in on that interval afterward. The box always links to whichever logo is currently showing.",
         control: {
             type: ControlType.Object,
             controls: {
