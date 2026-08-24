@@ -81,6 +81,12 @@ Historico de sincronizacao entre Codex, Claude e outros agentes.
 | Claude | Ajustar centralizacao do Overlay Frame do Scroll Mask: antes o `cloneElement` forcava width E height 100% no frame conectado, fazendo-o esticar e preencher toda a area (sem sobrar espaco pra "centralizar" de fato). Agora so a largura e forcada a 100% (sempre fill); a altura do proprio frame conectado e preservada, e ele fica centralizado horizontal e verticalmente dentro da area definida por "Overlay Height" via flexbox do wrapper sticky | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
 | Claude | Corrigir Overlay Frame do Scroll Mask ainda nao centralizando (preview e site publicado): o frame conectado via `ControlType.ComponentInstance` carrega seu proprio `style` inline com `position: absolute` e coordenadas top/left/transform herdadas do posicionamento no Canvas, entao ele ignorava por completo o flexbox do wrapper. O `cloneElement` agora tambem sobrescreve `position` para "relative" e reseta `top`/`left`/`right`/`bottom`/`transform`, permitindo que o frame flua normalmente dentro do wrapper flex e seja realmente centralizado | `Framer Codes Component/AYVU/ScrollMask.tsx`, `Sync/log.md` | concluido |
 
+## 2026-08-24
+
+| Agente | Tarefa | Arquivos | Status |
+| --- | --- | --- | --- |
+| Claude | Criar componente Pattern Reveal (baseado no design Figma "MEMP" node 79:12, blueprint grid de linhas): grade de linhas SVG que "desenha" cada linha do centro para as pontas via `scale` (orientacao-agnostico, funciona pra linhas verticais/horizontais/diagonais) com `vector-effect="non-scaling-stroke"` pra manter a espessura constante durante a animacao; 5 variacoes de pattern (MEMP Grid recriando o design original, Symmetric Grid, Diagonal Lattice, Concentric Frames, Scattered Blueprint com seed numerica reprodutivel); stagger opcional ordenado pela distancia ao centro do canvas, pra a composicao inteira tambem crescer de dentro pra fora; trigger On Load ou On Scroll Into View (useInView), replay opcional, suporte a prefers-reduced-motion | `Framer Codes Component/MEMP/PatternReveal.tsx`, `Sync/log.md` | concluido |
+
 ## Decisoes
 
 - `Page Builder/` concentra o editor visual estilo Framer, desenvolvido por fases (ver `Page Builder/docs/PLANO.md`). Cada projeto criado pelo editor vira um repositorio GitHub proprio.
