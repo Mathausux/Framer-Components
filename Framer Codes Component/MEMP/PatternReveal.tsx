@@ -5,18 +5,19 @@ import { addPropertyControls, ControlType } from "framer"
 /**
  * Pattern Reveal
  *
- * Decorative line-grid pattern (inspired by the MEMP Figma blueprint grid)
- * where every line "draws" itself starting from its own center point and
- * growing out towards both tips at once. Built on top of `scale`, which
- * for a straight line is orientation-agnostic: scaling a segment around
- * its own midpoint always grows it symmetrically toward both ends,
- * regardless of whether the line is vertical, horizontal or diagonal.
- * `vector-effect="non-scaling-stroke"` keeps the stroke thickness constant
- * while that scale animates, so only the length grows.
+ * Decorative line-grid pattern where every line "draws" itself starting
+ * from its own center point and growing out towards both tips at once.
+ * Built on top of `scale`, which for a straight line is orientation-
+ * agnostic: scaling a segment around its own midpoint always grows it
+ * symmetrically toward both ends, regardless of whether the line is
+ * vertical, horizontal or diagonal. `vector-effect="non-scaling-stroke"`
+ * keeps the stroke thickness constant while that scale animates, so only
+ * the length grows.
  *
- * "Variant" swaps the whole line layout (five generated pattern styles).
- * "Scattered Blueprint" additionally takes a numeric Seed, so changing
- * that single number produces new, reproducible arrangements.
+ * "Pattern" swaps the whole line layout across eight generated styles.
+ * "Irregular Grid" and "Scattered" additionally take a numeric Seed, so
+ * changing that single number reshuffles the layout into a new,
+ * reproducible arrangement.
  *
  * When "Stagger From Center" is on, lines closer to the canvas center
  * start revealing first, so the whole composition also grows outward as
@@ -29,12 +30,14 @@ import { addPropertyControls, ControlType } from "framer"
  */
 export default function PatternReveal(props: PatternRevealProps) {
     const {
-        variant = "memp",
+        variant = "blueprintGrid",
         columns = 10,
         rows = 6,
         diagonalSpacing = 90,
         frameCount = 6,
         scatterCount = 24,
+        burstCount = 24,
+        burstRadius = 280,
         seed = 7,
         strokeColor = "rgba(255,255,255,0.22)",
         strokeWidth = 1,
@@ -58,19 +61,35 @@ export default function PatternReveal(props: PatternRevealProps) {
 
     const rawLines = useMemo(() => {
         switch (variant) {
+            case "irregularGrid":
+                return buildIrregularGrid(seed, columns, rows)
             case "symmetric":
                 return buildSymmetric(columns, rows)
             case "diagonalCross":
                 return buildDiagonalCross(diagonalSpacing)
+            case "chevron":
+                return buildChevron(columns, rows)
+            case "radialBurst":
+                return buildRadialBurst(burstCount, burstRadius)
             case "concentricFrames":
                 return buildConcentricFrames(frameCount)
             case "scattered":
                 return buildScattered(seed, scatterCount)
-            case "memp":
+            case "blueprintGrid":
             default:
-                return MEMP_LINES
+                return BLUEPRINT_GRID_LINES
         }
-    }, [variant, columns, rows, diagonalSpacing, frameCount, scatterCount, seed])
+    }, [
+        variant,
+        columns,
+        rows,
+        diagonalSpacing,
+        frameCount,
+        scatterCount,
+        burstCount,
+        burstRadius,
+        seed,
+    ])
 
     const lines = useMemo(() => {
         if (!staggerFromCenter) return rawLines
@@ -131,12 +150,22 @@ interface LineSeg {
 }
 
 interface PatternRevealProps {
-    variant: "memp" | "symmetric" | "diagonalCross" | "concentricFrames" | "scattered"
+    variant:
+        | "blueprintGrid"
+        | "irregularGrid"
+        | "symmetric"
+        | "diagonalCross"
+        | "chevron"
+        | "radialBurst"
+        | "concentricFrames"
+        | "scattered"
     columns: number
     rows: number
     diagonalSpacing: number
     frameCount: number
     scatterCount: number
+    burstCount: number
+    burstRadius: number
     seed: number
     strokeColor: string
     strokeWidth: number
@@ -163,10 +192,10 @@ function mulberry32(seed: number) {
     }
 }
 
-/** Recreation of the MEMP Figma blueprint grid (node 79:12): irregular
- *  columns, a full-width horizontal split, a subdivided inner column, and
- *  a coarser row of columns below the split. */
-const MEMP_LINES: LineSeg[] = (() => {
+/** Fixed architectural blueprint grid: irregular columns, a full-width
+ *  horizontal split, a subdivided inner column, and a coarser row of
+ *  columns below the split. */
+const BLUEPRINT_GRID_LINES: LineSeg[] = (() => {
     const splitY = 407
     const topXs = [2, 39, 109, 130, 156, 184, 230, 281, 372, 406, 504, 519, 554, 749, 921, 944, 971, 998]
     const bottomXs = [39, 281, 504, 749, 998]
@@ -178,6 +207,34 @@ const MEMP_LINES: LineSeg[] = (() => {
     for (const x of bottomXs) lines.push({ x1: x, y1: splitY, x2: x, y2: VB_H })
     return lines
 })()
+
+/** Same architectural-grid spirit as Blueprint Grid, but with randomized
+ *  (seeded) column widths and row heights instead of a fixed layout. */
+function buildIrregularGrid(seed: number, columns: number, rows: number): LineSeg[] {
+    const random = mulberry32(seed)
+    const colWeights = Array.from({ length: columns }, () => 0.4 + random())
+    const rowWeights = Array.from({ length: rows }, () => 0.4 + random())
+    const colSum = colWeights.reduce((a, b) => a + b, 0)
+    const rowSum = rowWeights.reduce((a, b) => a + b, 0)
+
+    const xs = [0]
+    let x = 0
+    for (const w of colWeights) {
+        x += (w / colSum) * VB_W
+        xs.push(x)
+    }
+    const ys = [0]
+    let y = 0
+    for (const w of rowWeights) {
+        y += (w / rowSum) * VB_H
+        ys.push(y)
+    }
+
+    const lines: LineSeg[] = []
+    for (const xv of xs) lines.push({ x1: xv, y1: 0, x2: xv, y2: VB_H })
+    for (const yv of ys) lines.push({ x1: 0, y1: yv, x2: VB_W, y2: yv })
+    return lines
+}
 
 function buildSymmetric(columns: number, rows: number): LineSeg[] {
     const lines: LineSeg[] = []
@@ -199,6 +256,39 @@ function buildDiagonalCross(spacing: number, legLen = 64): LineSeg[] {
             lines.push({ x1: cx - legLen, y1: cy - legLen, x2: cx + legLen, y2: cy + legLen })
             lines.push({ x1: cx - legLen, y1: cy + legLen, x2: cx + legLen, y2: cy - legLen })
         }
+    }
+    return lines
+}
+
+/** Herringbone-style rows of "^" chevrons, one per grid cell. */
+function buildChevron(columns: number, rows: number): LineSeg[] {
+    const lines: LineSeg[] = []
+    const cellW = VB_W / columns
+    const cellH = VB_H / rows
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < columns; c++) {
+            const x0 = c * cellW
+            const xMid = x0 + cellW / 2
+            const x1 = x0 + cellW
+            const yTop = r * cellH
+            const yBottom = yTop + cellH
+            lines.push({ x1: x0, y1: yTop, x2: xMid, y2: yBottom })
+            lines.push({ x1: xMid, y1: yBottom, x2: x1, y2: yTop })
+        }
+    }
+    return lines
+}
+
+/** Lines through the canvas center at even angles, like a starburst. */
+function buildRadialBurst(count: number, radius: number): LineSeg[] {
+    const cx = VB_W / 2
+    const cy = VB_H / 2
+    const lines: LineSeg[] = []
+    for (let i = 0; i < count; i++) {
+        const angle = (i / count) * Math.PI * 2
+        const dx = Math.cos(angle) * radius
+        const dy = Math.sin(angle) * radius
+        lines.push({ x1: cx - dx, y1: cy - dy, x2: cx + dx, y2: cy + dy })
     }
     return lines
 }
@@ -241,19 +331,34 @@ function buildScattered(seed: number, count: number): LineSeg[] {
     return lines
 }
 
+const GRID_VARIANTS = ["symmetric", "irregularGrid", "chevron"]
+const SEEDED_VARIANTS = ["irregularGrid", "scattered"]
+
 addPropertyControls(PatternReveal, {
     variant: {
         type: ControlType.Enum,
         title: "Pattern",
-        options: ["memp", "symmetric", "diagonalCross", "concentricFrames", "scattered"],
+        options: [
+            "blueprintGrid",
+            "irregularGrid",
+            "symmetric",
+            "diagonalCross",
+            "chevron",
+            "radialBurst",
+            "concentricFrames",
+            "scattered",
+        ],
         optionTitles: [
-            "MEMP Grid",
+            "Blueprint Grid",
+            "Irregular Grid",
             "Symmetric Grid",
             "Diagonal Lattice",
+            "Chevron Rows",
+            "Radial Burst",
             "Concentric Frames",
-            "Scattered Blueprint",
+            "Scattered Lines",
         ],
-        defaultValue: "memp",
+        defaultValue: "blueprintGrid",
     },
     columns: {
         type: ControlType.Number,
@@ -262,7 +367,7 @@ addPropertyControls(PatternReveal, {
         max: 30,
         step: 1,
         defaultValue: 10,
-        hidden: (props) => props.variant !== "symmetric",
+        hidden: (props) => !GRID_VARIANTS.includes(props.variant),
     },
     rows: {
         type: ControlType.Number,
@@ -271,7 +376,7 @@ addPropertyControls(PatternReveal, {
         max: 20,
         step: 1,
         defaultValue: 6,
-        hidden: (props) => props.variant !== "symmetric",
+        hidden: (props) => !GRID_VARIANTS.includes(props.variant),
     },
     diagonalSpacing: {
         type: ControlType.Number,
@@ -282,6 +387,24 @@ addPropertyControls(PatternReveal, {
         step: 5,
         defaultValue: 90,
         hidden: (props) => props.variant !== "diagonalCross",
+    },
+    burstCount: {
+        type: ControlType.Number,
+        title: "Line Count",
+        min: 6,
+        max: 72,
+        step: 1,
+        defaultValue: 24,
+        hidden: (props) => props.variant !== "radialBurst",
+    },
+    burstRadius: {
+        type: ControlType.Number,
+        title: "Radius",
+        min: 50,
+        max: 500,
+        step: 10,
+        defaultValue: 280,
+        hidden: (props) => props.variant !== "radialBurst",
     },
     frameCount: {
         type: ControlType.Number,
@@ -304,12 +427,12 @@ addPropertyControls(PatternReveal, {
     seed: {
         type: ControlType.Number,
         title: "Seed",
-        description: "Change this number to generate a different scattered arrangement.",
+        description: "Change this number to reshuffle the layout into a new arrangement.",
         min: 0,
         max: 9999,
         step: 1,
         defaultValue: 7,
-        hidden: (props) => props.variant !== "scattered",
+        hidden: (props) => !SEEDED_VARIANTS.includes(props.variant),
     },
     strokeColor: {
         type: ControlType.Color,
