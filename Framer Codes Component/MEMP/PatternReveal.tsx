@@ -14,10 +14,10 @@ import { addPropertyControls, ControlType } from "framer"
  * keeps the stroke thickness constant while that scale animates, so only
  * the length grows.
  *
- * "Pattern" swaps the whole line layout across eight generated styles.
- * "Irregular Grid" and "Scattered" additionally take a numeric Seed, so
- * changing that single number reshuffles the layout into a new,
- * reproducible arrangement.
+ * "Pattern" swaps the whole line layout across nine generated styles.
+ * "Blueprint Grid (Random)", "Irregular Grid" and "Scattered" additionally
+ * take a numeric Seed, so changing that single number reshuffles the
+ * layout into a new, reproducible arrangement.
  *
  * When "Stagger From Center" is on, lines closer to the canvas center
  * start revealing first, so the whole composition also grows outward as
@@ -38,6 +38,8 @@ export default function PatternReveal(props: PatternRevealProps) {
         scatterCount = 24,
         burstCount = 24,
         burstRadius = 280,
+        blueprintColumns = 16,
+        blueprintBottomColumns = 5,
         seed = 7,
         strokeColor = "rgba(255,255,255,0.22)",
         strokeWidth = 1,
@@ -61,6 +63,8 @@ export default function PatternReveal(props: PatternRevealProps) {
 
     const rawLines = useMemo(() => {
         switch (variant) {
+            case "blueprintRandom":
+                return buildBlueprintRandom(seed, blueprintColumns, blueprintBottomColumns)
             case "irregularGrid":
                 return buildIrregularGrid(seed, columns, rows)
             case "symmetric":
@@ -88,6 +92,8 @@ export default function PatternReveal(props: PatternRevealProps) {
         scatterCount,
         burstCount,
         burstRadius,
+        blueprintColumns,
+        blueprintBottomColumns,
         seed,
     ])
 
@@ -152,6 +158,7 @@ interface LineSeg {
 interface PatternRevealProps {
     variant:
         | "blueprintGrid"
+        | "blueprintRandom"
         | "irregularGrid"
         | "symmetric"
         | "diagonalCross"
@@ -166,6 +173,8 @@ interface PatternRevealProps {
     scatterCount: number
     burstCount: number
     burstRadius: number
+    blueprintColumns: number
+    blueprintBottomColumns: number
     seed: number
     strokeColor: string
     strokeWidth: number
@@ -207,6 +216,54 @@ const BLUEPRINT_GRID_LINES: LineSeg[] = (() => {
     for (const x of bottomXs) lines.push({ x1: x, y1: splitY, x2: x, y2: VB_H })
     return lines
 })()
+
+/** Same visual grammar as Blueprint Grid (mixed thin/wide columns, one
+ *  horizontal split, one subdivided inner column, a coarser row below the
+ *  split) but every piece — column order/widths, split height, which
+ *  column gets subdivided, bottom row — is shuffled from a seed, so each
+ *  seed value reproduces a different-looking blueprint composition. */
+function buildBlueprintRandom(seed: number, columns: number, bottomColumns: number): LineSeg[] {
+    const random = mulberry32(seed)
+    const splitY = (0.55 + random() * 0.25) * VB_H
+
+    const colWeights = Array.from({ length: columns }, () => (random() < 0.35 ? 0.15 + random() * 0.3 : 0.6 + random() * 1.6))
+    const colSum = colWeights.reduce((a, b) => a + b, 0)
+    const xs = [0]
+    let x = 0
+    for (const w of colWeights) {
+        x += (w / colSum) * VB_W
+        xs.push(x)
+    }
+
+    const lines: LineSeg[] = []
+    for (const xv of xs) lines.push({ x1: xv, y1: 0, x2: xv, y2: splitY })
+    lines.push({ x1: 0, y1: splitY, x2: VB_W, y2: splitY })
+
+    if (xs.length > 2) {
+        const boxIndex = 1 + Math.floor(random() * (xs.length - 2))
+        const bx1 = xs[boxIndex]
+        const bx2 = xs[boxIndex + 1]
+        if (bx2 - bx1 > 40) {
+            const divisions = 2 + Math.floor(random() * 2)
+            for (let d = 1; d <= divisions; d++) {
+                const y = (d / (divisions + 1)) * splitY
+                lines.push({ x1: bx1, y1: y, x2: bx2, y2: y })
+            }
+        }
+    }
+
+    const bottomWeights = Array.from({ length: bottomColumns }, () => 0.6 + random() * 1.4)
+    const bottomSum = bottomWeights.reduce((a, b) => a + b, 0)
+    const bxs = [0]
+    let bx = 0
+    for (const w of bottomWeights) {
+        bx += (w / bottomSum) * VB_W
+        bxs.push(bx)
+    }
+    for (const xv of bxs) lines.push({ x1: xv, y1: splitY, x2: xv, y2: VB_H })
+
+    return lines
+}
 
 /** Same architectural-grid spirit as Blueprint Grid, but with randomized
  *  (seeded) column widths and row heights instead of a fixed layout. */
@@ -332,7 +389,7 @@ function buildScattered(seed: number, count: number): LineSeg[] {
 }
 
 const GRID_VARIANTS = ["symmetric", "irregularGrid", "chevron"]
-const SEEDED_VARIANTS = ["irregularGrid", "scattered"]
+const SEEDED_VARIANTS = ["blueprintRandom", "irregularGrid", "scattered"]
 
 addPropertyControls(PatternReveal, {
     variant: {
@@ -340,6 +397,7 @@ addPropertyControls(PatternReveal, {
         title: "Pattern",
         options: [
             "blueprintGrid",
+            "blueprintRandom",
             "irregularGrid",
             "symmetric",
             "diagonalCross",
@@ -350,6 +408,7 @@ addPropertyControls(PatternReveal, {
         ],
         optionTitles: [
             "Blueprint Grid",
+            "Blueprint Grid (Random)",
             "Irregular Grid",
             "Symmetric Grid",
             "Diagonal Lattice",
@@ -359,6 +418,25 @@ addPropertyControls(PatternReveal, {
             "Scattered Lines",
         ],
         defaultValue: "blueprintGrid",
+    },
+    blueprintColumns: {
+        type: ControlType.Number,
+        title: "Columns",
+        description: "How many top-region columns to shuffle widths for.",
+        min: 6,
+        max: 30,
+        step: 1,
+        defaultValue: 16,
+        hidden: (props) => props.variant !== "blueprintRandom",
+    },
+    blueprintBottomColumns: {
+        type: ControlType.Number,
+        title: "Bottom Columns",
+        min: 2,
+        max: 12,
+        step: 1,
+        defaultValue: 5,
+        hidden: (props) => props.variant !== "blueprintRandom",
     },
     columns: {
         type: ControlType.Number,
