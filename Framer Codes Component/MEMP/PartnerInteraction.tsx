@@ -8,12 +8,14 @@ import { addPropertyControls, ControlType } from "framer"
  * A single logo box that randomly swaps between the logos it was given.
  * One logo is picked at random on load, and — if "Change Interval" is
  * greater than 0 — a different random logo (never the one currently
- * showing) replaces it with a crossfade on that interval.
+ * showing) replaces it with a slide-to-top transition on that interval:
+ * the current logo slides up and out while the next one slides in from
+ * the bottom.
  *
- * On hover, the box reveals a bracketed overlay panel with a short text
- * and an arrow icon, centered on top of the logo. The whole box is a
- * link to the page set in "Link" — hovering communicates "this goes
- * somewhere", clicking anywhere on the box follows it.
+ * Each logo carries its own link. The whole box is a link to whichever
+ * logo is currently showing, so clicking it always opens that partner's
+ * page. On hover, the box reveals a bracketed overlay panel with a short
+ * text and an arrow icon, centered on top of the logo.
  *
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
@@ -23,7 +25,6 @@ import { addPropertyControls, ControlType } from "framer"
 export default function PartnerInteraction(props: PartnerInteractionProps) {
     const {
         logos = [],
-        link,
         openInNewTab = false,
         hoverText = "Abrir projeto",
         changeInterval = 4,
@@ -36,7 +37,7 @@ export default function PartnerInteraction(props: PartnerInteractionProps) {
         cornerColor = "#000000",
     } = props
 
-    const validLogos = logos.filter((logo) => logo?.src)
+    const validLogos = logos.filter((logo) => logo?.image?.src)
 
     const [index, setIndex] = useState(0)
     const [isHovering, setIsHovering] = useState(false)
@@ -67,10 +68,11 @@ export default function PartnerInteraction(props: PartnerInteractionProps) {
     }, [changeInterval, validLogos.length])
 
     const currentLogo = validLogos[index]
+    const currentLink = currentLogo?.link
 
     return (
         <a
-            href={link || undefined}
+            href={currentLink || undefined}
             target={openInNewTab ? "_blank" : undefined}
             rel={openInNewTab ? "noopener noreferrer" : undefined}
             onMouseEnter={() => setIsHovering(true)}
@@ -86,33 +88,42 @@ export default function PartnerInteraction(props: PartnerInteractionProps) {
                 border: `1px solid ${borderColor}`,
                 overflow: "hidden",
                 boxSizing: "border-box",
-                cursor: link ? "pointer" : "default",
+                cursor: currentLink ? "pointer" : "default",
                 textDecoration: "none",
             }}
         >
-            <AnimatePresence mode="wait">
-                {currentLogo && (
-                    <motion.img
-                        key={index}
-                        src={currentLogo.src}
-                        alt={currentLogo.alt ?? ""}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.4, ease: "easeInOut" }}
-                        style={{
-                            maxWidth: logoMaxWidth,
-                            maxHeight: logoMaxHeight,
-                            width: "auto",
-                            height: "auto",
-                            objectFit: "contain",
-                            pointerEvents: "none",
-                            userSelect: "none",
-                        }}
-                        draggable={false}
-                    />
-                )}
-            </AnimatePresence>
+            <div
+                style={{
+                    position: "relative",
+                    width: logoMaxWidth,
+                    height: logoMaxHeight,
+                    overflow: "hidden",
+                }}
+            >
+                <AnimatePresence mode="popLayout" initial={false}>
+                    {currentLogo && (
+                        <motion.img
+                            key={index}
+                            src={currentLogo.image.src}
+                            alt={currentLogo.image.alt ?? ""}
+                            initial={{ y: "100%", opacity: 1 }}
+                            animate={{ y: "0%", opacity: 1 }}
+                            exit={{ y: "-100%", opacity: 1 }}
+                            transition={{ duration: 0.5, ease: [0.65, 0, 0.35, 1] }}
+                            style={{
+                                position: "absolute",
+                                inset: 0,
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "contain",
+                                pointerEvents: "none",
+                                userSelect: "none",
+                            }}
+                            draggable={false}
+                        />
+                    )}
+                </AnimatePresence>
+            </div>
 
             <motion.div
                 initial={false}
@@ -218,9 +229,13 @@ interface LogoImage {
     alt?: string
 }
 
-interface PartnerInteractionProps {
-    logos: LogoImage[]
+interface LogoItem {
+    image?: LogoImage
     link?: string
+}
+
+interface PartnerInteractionProps {
+    logos: LogoItem[]
     openInNewTab: boolean
     hoverText: string
     changeInterval: number
@@ -238,15 +253,20 @@ addPropertyControls(PartnerInteraction, {
         type: ControlType.Array,
         title: "Logos",
         description:
-            "Add every partner logo here. One is shown at random, and — if Change Interval is greater than 0 — a different random logo replaces it on that interval.",
+            "Add every partner logo and its own link. One is shown at random, and — if Change Interval is greater than 0 — a different random logo slides in on that interval. The box always links to whichever logo is currently showing.",
         control: {
-            type: ControlType.ResponsiveImage,
+            type: ControlType.Object,
+            controls: {
+                image: {
+                    type: ControlType.ResponsiveImage,
+                    title: "Image",
+                },
+                link: {
+                    type: ControlType.Link,
+                    title: "Link",
+                },
+            },
         },
-    },
-    link: {
-        type: ControlType.Link,
-        title: "Link",
-        description: "Page the box links to when clicked.",
     },
     openInNewTab: {
         type: ControlType.Boolean,
