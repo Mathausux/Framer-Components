@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
 import { motion, useScroll, useTransform } from "framer-motion"
 import { addPropertyControls, ControlType } from "framer"
 
@@ -20,6 +20,12 @@ import { addPropertyControls, ControlType } from "framer"
  * it directly in a normal page flow, without constraining the frame's
  * height in Framer, for the lock effect to work.
  *
+ * The eyebrow badge (icon + label, top-left of the sidebar) can be
+ * designed as its own layer on the Canvas and connected via "Eyebrow
+ * (Canvas)" — when connected it replaces the built-in icon/text eyebrow
+ * entirely, so it's imported straight from the Canvas instead of being
+ * built from text/image props.
+ *
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  * @framerIntrinsicWidth 1216
@@ -27,6 +33,7 @@ import { addPropertyControls, ControlType } from "framer"
  */
 export default function ScrollLockCards(props: ScrollLockCardsProps) {
     const {
+        eyebrow,
         eyebrowText = "BEM VINDO A MEMP",
         eyebrowIcon,
         description = "Negócios de diferentes segmentos já contaram com a Memp para fortalecer comunicação, posicionamento e operação.",
@@ -139,54 +146,58 @@ export default function ScrollLockCards(props: ScrollLockCardsProps) {
                             boxSizing: "border-box",
                         }}
                     >
-                        <div
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 16,
-                            }}
-                        >
+                        {eyebrow ? (
+                            eyebrow
+                        ) : (
                             <div
                                 style={{
-                                    width: 32,
-                                    height: 32,
-                                    flexShrink: 0,
                                     display: "flex",
                                     alignItems: "center",
-                                    justifyContent: "center",
-                                    background: "rgba(0,0,0,0.08)",
-                                    border: `1px solid ${borderColor}`,
+                                    gap: 16,
                                 }}
                             >
-                                {eyebrowIcon?.src && (
-                                    <img
-                                        src={eyebrowIcon.src}
-                                        alt={eyebrowIcon.alt ?? ""}
-                                        style={{
-                                            width: "100%",
-                                            height: "100%",
-                                            objectFit: "contain",
-                                            pointerEvents: "none",
-                                        }}
-                                        draggable={false}
-                                    />
-                                )}
+                                <div
+                                    style={{
+                                        width: 32,
+                                        height: 32,
+                                        flexShrink: 0,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        background: "rgba(0,0,0,0.08)",
+                                        border: `1px solid ${borderColor}`,
+                                    }}
+                                >
+                                    {eyebrowIcon?.src && (
+                                        <img
+                                            src={eyebrowIcon.src}
+                                            alt={eyebrowIcon.alt ?? ""}
+                                            style={{
+                                                width: "100%",
+                                                height: "100%",
+                                                objectFit: "contain",
+                                                pointerEvents: "none",
+                                            }}
+                                            draggable={false}
+                                        />
+                                    )}
+                                </div>
+                                <p
+                                    style={{
+                                        margin: 0,
+                                        fontSize: 10,
+                                        lineHeight: 1.4,
+                                        letterSpacing: 1.6,
+                                        textTransform: "uppercase",
+                                        color: textColor,
+                                        opacity: 0.72,
+                                        whiteSpace: "nowrap",
+                                    }}
+                                >
+                                    {eyebrowText}
+                                </p>
                             </div>
-                            <p
-                                style={{
-                                    margin: 0,
-                                    fontSize: 10,
-                                    lineHeight: 1.4,
-                                    letterSpacing: 1.6,
-                                    textTransform: "uppercase",
-                                    color: textColor,
-                                    opacity: 0.72,
-                                    whiteSpace: "nowrap",
-                                }}
-                            >
-                                {eyebrowText}
-                            </p>
-                        </div>
+                        )}
 
                         <div
                             style={{
@@ -443,6 +454,7 @@ interface CardItem {
 }
 
 interface ScrollLockCardsProps {
+    eyebrow?: ReactNode
     eyebrowText: string
     eyebrowIcon?: CardImage
     description: string
@@ -501,14 +513,22 @@ const defaultCards: CardItem[] = [
 ]
 
 addPropertyControls(ScrollLockCards, {
+    eyebrow: {
+        type: ControlType.ComponentInstance,
+        title: "Eyebrow (Canvas)",
+        description:
+            "Optional: connect a layer/component from the Canvas to use as the eyebrow badge instead of the built-in icon + text below. When connected, Eyebrow Text and Eyebrow Icon are ignored.",
+    },
     eyebrowText: {
         type: ControlType.String,
-        title: "Eyebrow",
+        title: "Eyebrow Text",
         defaultValue: "BEM VINDO A MEMP",
+        hidden: (props: ScrollLockCardsProps) => Boolean(props.eyebrow),
     },
     eyebrowIcon: {
         type: ControlType.ResponsiveImage,
         title: "Eyebrow Icon",
+        hidden: (props: ScrollLockCardsProps) => Boolean(props.eyebrow),
     },
     description: {
         type: ControlType.String,
